@@ -11,11 +11,19 @@ SEP = CONSTANTS.COMMON.SEPARATOR
 
 def get_camera_data(json_data):
     country = json_data[0]['highway']['country']
-    camera_ids = [[camera['camera_id'],camera['camera_type']] for highway in json_data for camera in highway['highway']['cameras']]
-    return [
-        country,
-        camera_ids
-    ]
+    if country == 'IT':
+        camera_ids = [
+            [camera['camera_id'], camera['url']]
+            for highway in json_data
+            for camera in highway['highway']['cameras']
+        ]
+    else:
+        camera_ids = [
+            [camera['camera_id'], camera['camera_type']]
+            for highway in json_data
+            for camera in highway['highway']['cameras']
+        ]
+    return [country, camera_ids]
 
 
 async def check_camera_async(
