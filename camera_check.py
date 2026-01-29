@@ -5,7 +5,9 @@ import httpx
 from tqdm.asyncio import tqdm
 
 import diff_hash
-from utils import save_json, load_json, create_url, HTTPError
+from utils import save_json, load_json, create_url, HTTPError, CONSTANTS
+
+SEP = CONSTANTS.COMMON.SEPARATOR
 
 def get_camera_data(json_data):
     country = json_data[0]['highway']['country']
@@ -16,28 +18,45 @@ def get_camera_data(json_data):
     ]
 
 
-async def check_camera_async(client, source, camera_id, camera_type, rate_limit, download, output_dir):
-    url,ext = create_url(source, camera_id, camera_type)
+async def check_camera_async(
+    client, source, camera_id, camera_type, rate_limit, download, output_dir
+):
+    if source in ['ES','FR']:
+        url, ext = create_url(source, camera_id, camera_type)
+    elif source in ['IT']:
+        url = camera_type
+        ext = CONSTANTS.ITALY.VIDEO_EXT
+    else:
+        raise ValueError(f'Unknown source: {source}')
     async with rate_limit:
         try:
-            response = await client.get(url, timeout=20.0, follow_redirects=True)
+            response = await client.get(url, timeout=10.0, follow_redirects=True)
             response.raise_for_status()
             if len(response.content) < 1000:
-                raise HTTPError(f"Response too small: {len(response.content)} bytes")
+                raise HTTPError(f'Response too small: {len(response.content)} bytes')
             if not download:
-                return {"id": camera_id, "alive": response.status_code}
-            filename = f"{camera_id}{ext}"
+                return {'id': camera_id, 'alive': response.status_code}
+            filename = f'{camera_id}{ext}'
             file_path = Path.joinpath(output_dir, filename)
             async with aiofiles.open(file_path, mode='wb') as f:
                 await f.write(response.content)
-            return {"id": camera_id, "alive": response.status_code}
-        except (httpx.HTTPStatusError, httpx.RequestError, HTTPError, httpx.RemoteProtocolError, httpx.ConnectError, httpx.ReadTimeout):
+            return {'id': camera_id, 'alive': response.status_code}
+        except (
+            httpx.HTTPStatusError,
+            httpx.RequestError,
+            HTTPError,
+            httpx.RemoteProtocolError,
+            httpx.ConnectError,
+            httpx.ReadTimeout,
+        ):
             file_len = 0
             if response is not None:
                 file_len = len(response.content)
-            return {"id": camera_id, "alive": False, "len": file_len}
+            return {'id': camera_id, 'alive': False, 'len': file_len}
 
-def remove_offline_cameras(camera_json, errored_cameras, output_file='data/cameras_filtered.json'):
+
+def remove_offline_cameras(
+    camera_json, errored_cameras, output_file:Path):
     errored_ids = set(errored_cameras)
     removed_count = 0
     for highway_item in camera_json:
@@ -50,11 +69,11 @@ def remove_offline_cameras(camera_json, errored_cameras, output_file='data/camer
         diff = original_count - len(highway['cameras'])
         if diff > 0:
             removed_count += diff
-            print(f"Removed {diff} cameras from {highway.get('name', 'Unknown')}")
+            print(f'Removed {diff} cameras from {highway.get('name', 'Unknown')}')
 
     save_json(camera_json, output_file)
-    print('=' * 36)
-    print(f"Total removed: {removed_count}. Filtered data saved to {output_file}")
+    print(SEP)
+    print(f'Total removed: {removed_count}. Filtered data saved to {output_file}')
 
 
 async def main(camera_json, rate_limit=20, download=True):
@@ -67,28 +86,37 @@ async def main(camera_json, rate_limit=20, download=True):
     rate_limit = asyncio.Semaphore(rate_limit)
 
     async with httpx.AsyncClient() as client:
-        tasks = [check_camera_async(client, source, cam_id, cam_type, rate_limit, download, output_dir) for cam_id, cam_type in camera_ids]
-        results = await tqdm.gather(*tasks, desc="Checking cameras", unit="cam")
+        tasks = [
+            check_camera_async(
+                client, source, cam_id, cam_type, rate_limit, download, output_dir
+            )
+            for cam_id, cam_type in camera_ids
+        ]
+        results = await tqdm.gather(*tasks, desc='Checking cameras', unit='cam')
 
     # Separate successful and failed cameras
-    alive_cameras = [res["id"] for res in results if res["alive"]]
-    errored_cameras = [res["id"] for res in results if not res["alive"]]
+    alive_cameras = [res['id'] for res in results if res['alive']]
+    errored_cameras = [res['id'] for res in results if not res['alive']]
+    probably_offline_cams = ''
     if download:
-        print("Verifying sample images...")
+        print('Verifying sample images...')
         probably_offline_cams = diff_hash.folder_hash(output_dir)
         errored_cameras.extend(probably_offline_cams)
         alive_cameras = list(set(alive_cameras) - probably_offline_cams)
 
     if errored_cameras:
-        print('=' * 36)
-        print("Filtering offline cameras")
-        print('=' * 36)
-        output_file = f'data/cameras_{source.lower()}_gov_online.json'
+        print(SEP)
+        print('Filtering offline cameras')
+        print(SEP)
+        output_dir = 'data/'
+        output_file = Path(output_dir + f'cameras_{source.lower()}_online.json')
         remove_offline_cameras(camera_json, errored_cameras, output_file)
         alive_percent = len(alive_cameras) / len(camera_ids) * 100
-        print(f"{len(alive_cameras)}/{len(camera_ids)} ({alive_percent:.2f}%) cameras are online.")
+        print(
+            f'{len(alive_cameras)}/{len(camera_ids)} ({alive_percent:.2f}%) cameras are online.'
+        )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     camera_file = load_json('data/cameras_fr.json')
     asyncio.run(main(camera_json=camera_file))

@@ -1,0 +1,25 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+
+# Ruff cache
+.ruff_cache/
+
+# Python version
+.python-version
+
+# UV lock file
+uv.lock
+
+# Data directory
+data/

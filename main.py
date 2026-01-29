@@ -2,22 +2,26 @@ import spain_parser
 import france_gov_parser
 import camera_check
 import asyncio
+from utils import CONSTANTS
 
+
+SEP = CONSTANTS.COMMON.SEPARATOR
 
 def check_cameras(data, download=True):
     # Set 'download' to False to not verify based on image similarity
     asyncio.run(camera_check.main(camera_json=data, download=download))
 
-def get_spain_data(output_file = None):
-    print('=' * 36)
+def get_spain_data(output_file=None):
+    print(SEP)
     print("Downloading Spain data...")
-    print('=' * 36)
+    print(SEP)
     return spain_parser.get_parsed_data(output_file)
 
-def get_france_data(output_file = None):
-    print('=' * 36)
+
+def get_france_data(output_file=None):
+    print(SEP)
     print("Downloading France data...")
-    print('=' * 36)
+    print(SEP)
     return france_gov_parser.get_parsed_data(output_file)
 
 def main():

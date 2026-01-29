@@ -9,6 +9,12 @@ import httpx
 
 
 class CONSTANTS:
+    class COMMON:
+        HTTPS_PREFIX = "https:"
+        SEPARATOR = '=' * 36
+        VIDEO_EXTENSIONS = ['.mp4', '.flv']
+        IMAGE_EXTENSIONS = ['.jpg', '.jpeg' ,'.png']
+
     class FRANCE:
         BASE_URL = 'https://www.bison-fute.gouv.fr/'
         TIMESTAMP_URL = 'data/iteration/date.json'
@@ -86,10 +92,12 @@ def xor_decode(msg: bytes, key: str) -> str:
     return decoded.decode('utf-8')
 
 
-def save_json(json_data: Union[str, dict, list], output: str) -> None:
+def save_json(json_data: Union[str, dict, list], output: Path) -> None:
     """Save JSON data to a file with proper error handling"""
     output_dir = pathlib.Path(output).parent
     output_dir.mkdir(parents=True, exist_ok=True)
+    if output.exists():
+        output=output.with_name(f"{output.stem}_other.json")
     try:
         # Handle both string and already parsed JSON data
         if isinstance(json_data, str):
@@ -124,14 +132,15 @@ def create_url(base, camera_id, camera_type):
         elif camera_type == 'img':
             ext = CONSTANTS.FRANCE.IMAGE_EXT
         elif camera_type == 'other':
-            base_url = CONSTANTS.FRANCE.CAMERA_URL_OTHER
-            return base_url.format(camera_id=camera_id)
+            base_url = CONSTANTS.FRANCE.OTHER.CAMERA_URL
+            ext = CONSTANTS.FRANCE.OTHER.VIDEO_EXT
+            return base_url.format(camera_id=camera_id), ext
     elif base == "ES":
         base_url = CONSTANTS.SPAIN.CAMERA_URL
         ext = CONSTANTS.SPAIN.IMAGE_EXT
     else:
         return Exception("Invalid data")
-    return f"{base_url}{camera_id}{ext}",ext
+    return f"{base_url}{camera_id}{ext}", ext
 
 
 def timestamp_normalize(timestamp: Union[int, float]) -> float:

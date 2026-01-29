@@ -46,7 +46,11 @@ def parse_gov_cameras(baguettes, output_file):
             full_label = props.get('libelleCamera') or 'Unknown'
 
             road_match = ROAD_REGEX.search(full_label)
-            highway_name = f"{road_match.group(1)}-{road_match.group(2)}" if road_match else "Unknown"
+            highway_name = (
+                f'{road_match.group(1)}-{road_match.group(2)}'
+                if road_match
+                else 'Unknown'
+            )
 
             km_point = 0.0
             pr_match = PR_REGEX.search(full_label)
@@ -56,7 +60,13 @@ def parse_gov_cameras(baguettes, output_file):
                 km_point = km + (meters / 1000.0)
 
             flux_type = props.get('typeFlux') or ''
-            cam_type = 'vid' if flux_type == 'VIDEO' else 'img' if flux_type == 'IMAGE' else 'unknown'
+            cam_type = (
+                'vid'
+                if flux_type == 'VIDEO'
+                else 'img'
+                if flux_type == 'IMAGE'
+                else 'unknown'
+            )
 
             coords_in = geometry.get('coordinates') or []
             if len(coords_in) >= 2:
