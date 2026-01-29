@@ -16,22 +16,39 @@ class CONSTANTS:
         IMAGE_EXTENSIONS = ['.jpg', '.jpeg' ,'.png']
 
     class FRANCE:
-        BASE_URL = 'https://www.bison-fute.gouv.fr/'
-        TIMESTAMP_URL = 'data/iteration/date.json'
-        CAMERA_API = 'data/data-{datetime}/trafic/maintenant/camerasOL6/camerasOL6.json'
-        CAMERA_URL = 'https://www.bison-fute.gouv.fr/camera-upload/'
-        CAMERA_URL_OTHER = 'https://gieat.viewsurf.com?id={camera_id}&action=mediaRedirect'
-        VIDEO_EXT = '.mp4'
-        IMAGE_EXT = '.png'
+        BASE_URL = "https://www.bison-fute.gouv.fr/"
+        TIMESTAMP_URL = "data/iteration/date.json"
+        CAMERA_API = "data/data-{datetime}/trafic/maintenant/camerasOL6/camerasOL6.json"
+        CAMERA_URL = "https://www.bison-fute.gouv.fr/camera-upload/"
+        VIDEO_EXT = ".mp4"
+        IMAGE_EXT = ".png"
+
+        class OTHER:
+            BASE_URL = "https://www.autoroutes.fr/webtrafic/desktop/webcams_en.html"
+            AUTH_URL = "https://wt3.autoroutes-trafic.fr/authentication/?key={key}&base=www.autoroutes.fr&div=blocwebtrafic"
+            CAMERA_SUFFIX = "webcams.js"
+            VIDEO_EXT = '.flv'
+            CAMERA_URL = (
+                "https://gieat.viewsurf.com?id={camera_id}&action=mediaRedirect"
+            )
 
     class SPAIN:
-        BASE_URL = 'https://etraffic.dgt.es/etrafficWEB/api/'
-        CAMERA_URL = 'https://infocar.dgt.es/etraffic/data/camaras/'
-        CAMERA_API = 'cache/getCamaras'
-        XOR_KEY = 'K'
-        IMAGE_EXT = '.jpg'
-    class COMMON:
-        NON_DOWNLOADABLE = ['vid', 'other']
+        BASE_URL = "https://etraffic.dgt.es/etrafficWEB/api/"
+        CAMERA_URL = "https://infocar.dgt.es/etraffic/data/camaras/"
+        CAMERA_API = "cache/getCamaras"
+        XOR_KEY = "K"
+        IMAGE_EXT = ".jpg"
+
+    class ITALY:
+        BASE_URL = 'https://viabilita.autostrade.it/json/webcams.json'
+        CAMERA_URL = 'https://video.autostrade.it/video-mp4_hq/'
+        VIDEO_EXT = '.mp4'
+
+    class POLAND:
+        pass
+
+    class GERMANY:
+        pass
 
 
 class HTTPError(Exception):
@@ -92,7 +109,7 @@ def xor_decode(msg: bytes, key: str) -> str:
     return decoded.decode('utf-8')
 
 
-def save_json(json_data: Union[str, dict, list], output: Path) -> None:
+def save_json(json_data: Union[str, dict, list], output: pathlib.Path) -> None:
     """Save JSON data to a file with proper error handling"""
     output_dir = pathlib.Path(output).parent
     output_dir.mkdir(parents=True, exist_ok=True)
