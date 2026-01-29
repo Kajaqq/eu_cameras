@@ -9,8 +9,10 @@ dependencies = [
     "httpx>=0.28.1",
     "pillow>=12.1.0",
     "pybktree>=1.1",
-    "pyproj>=3.7.2",
+    "ruff>=0.14.14",
     "tqdm>=4.67.1",
     "typed-ffmpeg>=3.11",
     "tzdata>=2025.3",
+    "lambert==1.0.0",
+    "pip-system-certs>=5.3",
 ]

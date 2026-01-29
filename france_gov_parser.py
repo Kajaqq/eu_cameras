@@ -2,7 +2,7 @@ import json
 import re
 from collections import defaultdict
 
-from pyproj import Transformer
+from lambert import Lambert93, convertToWGS84Deg
 
 from utils import download, french_timestamp, save_json, CONSTANTS
 
@@ -28,9 +28,11 @@ def get_camera_data():
     data = download(download_link)
     return data
 
+def convert_to_wgs84(lon, lat):
+   pt = convertToWGS84Deg(lon, lat, Lambert93)
+   return pt.getX(), pt.getY()
 
 def parse_gov_cameras(baguettes, output_file):
-    transformer = Transformer.from_crs("EPSG:2154", "EPSG:4326", always_xy=True)
 
     try:
         raw_data = json.loads(baguettes)
@@ -70,7 +72,7 @@ def parse_gov_cameras(baguettes, output_file):
 
             coords_in = geometry.get('coordinates') or []
             if len(coords_in) >= 2:
-                lon, lat = transformer.transform(coords_in[0], coords_in[1])
+                lon, lat = convert_to_wgs84(coords_in[0], coords_in[1])
             else:
                 lon, lat = 0.0, 0.0
 
