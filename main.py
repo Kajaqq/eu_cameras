@@ -1,3 +1,5 @@
+import asyncio
+
 import italy_parser
 import spain_parser
 import france_gov_parser
@@ -7,48 +9,51 @@ import camera_check
 from utils import CONSTANTS
 
 SEP = CONSTANTS.COMMON.SEPARATOR
+DEFAULT_RATE_LIMIT = CONSTANTS.COMMON.RATE_LIMIT
+SPAIN_RATE_LIMIT = CONSTANTS.SPAIN.RATE_LIMIT
+ITALY_RATE_LIMIT = CONSTANTS.ITALY.RATE_LIMIT
 
 
-def check_cameras(data, download=True):
+async def check_cameras(data, rate_limit=DEFAULT_RATE_LIMIT, download=True):
     # Set 'download' to False to not verify based on image similarity
-    asyncio.run(camera_check.main(camera_json=data, download=download))
+    await camera_check.main(camera_json=data, download=download, rate_limit=rate_limit)
 
 
-def get_spain_data(output_file=None):
+async def get_spain_data(output_file=None):
     print(SEP)
     print("Downloading Spain data...")
     print(SEP)
-    return spain_parser.get_parsed_data(output_file)
+    return await spain_parser.get_parsed_data(output_file)
 
 
-def get_france_data(output_file=None):
+async def get_france_data(output_file=None):
     print(SEP)
     print("Downloading France data...")
     print(SEP)
-    return france_gov_parser.get_parsed_data(output_file)
+    return await france_gov_parser.get_parsed_data(output_file)
 
 
-def get_france_js_data(output_file=None):
+async def get_france_js_data(output_file=None):
     print(SEP)
     print("Downloading France JS data...")
     print(SEP)
-    return france_js_parse.get_parsed_data(output_file)
+    return await france_js_parse.get_parsed_data(output_file)
 
 
-def get_italy_data(output_file=None):
+async def get_italy_data(output_file=None):
     print(SEP)
     print("Downloading Italy data...")
     print(SEP)
-    return italy_parser.get_parsed_data(output_file)
+    return await italy_parser.get_parsed_data(output_file)
 
 
-def main():
+async def main():
     # Set the output file variable below to save the pre-parsed data too
-    check_cameras(data=get_spain_data())
-    check_cameras(data=get_france_data())
-    check_cameras(data=get_france_js_data())
-    check_cameras(data=get_italy_data())
+    await check_cameras(data=await get_spain_data(), rate_limit=SPAIN_RATE_LIMIT)
+    await check_cameras(data=await get_france_data())
+    await check_cameras(data=await get_france_js_data())
+    await check_cameras(data=await get_italy_data(), rate_limit=ITALY_RATE_LIMIT)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

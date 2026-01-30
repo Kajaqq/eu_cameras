@@ -10,10 +10,9 @@ DATA_URL = BASE_URL + CONSTANTS.SPAIN.CAMERA_API
 XOR_KEY = CONSTANTS.SPAIN.XOR_KEY
 
 
-
-def get_camera_data():
+async def get_camera_data():
     download_link = DATA_URL
-    data = download_post(download_link)
+    data = await download_post(download_link)
     decoded_data = decode_data(data)
     return decoded_data
 
@@ -65,13 +64,15 @@ def parse_camera_data(json_data, output_file=None):
         print(f"An unexpected error occurred: {e}")
 
 
-def get_parsed_data(output_file=None):
-    camera_data = get_camera_data()
+async def get_parsed_data(output_file=None):
+    camera_data = await get_camera_data()
     spain_data = parse_camera_data(camera_data, output_file)
     return spain_data
 
 
 if __name__ == "__main__":
-    OUTPUT_DIR = 'data/cameras_es_gov.json'
-    camera_data = get_camera_data()
+    import asyncio
+
+    OUTPUT_DIR = Path("data/cameras_es_gov.json")
+    camera_data = asyncio.run(get_camera_data())
     parse_camera_data(camera_data, OUTPUT_DIR)

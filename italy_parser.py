@@ -7,8 +7,9 @@ from utils import CONSTANTS, download, save_json
 BASE_URL = CONSTANTS.ITALY.BASE_URL
 CAMERA_BASE_URL = CONSTANTS.ITALY.CAMERA_URL
 
-def get_camera_data(url=BASE_URL):
-    json_data = download(url)
+
+async def get_camera_data(url=BASE_URL):
+    json_data = await download(url=url)
     return json.loads(json_data)
 
 
@@ -73,8 +74,9 @@ def parse_italy_cameras(raw_data):
     print(f"Data grouped by {len(final_output)} highways.")
     return final_output
 
-def get_parsed_data(output_file=None):
-    raw_data = get_camera_data()
+
+async def get_parsed_data(output_file=None):
+    raw_data = await get_camera_data()
     parsed_data = parse_italy_cameras(raw_data)
     if output_file:
         save_json(parsed_data, output_file)
@@ -82,5 +84,7 @@ def get_parsed_data(output_file=None):
 
 
 if __name__ == "__main__":
-    output = Path('data/cameras_it.json')
-    get_parsed_data(output)
+    import asyncio
+
+    output = Path("data/cameras_it.json")
+    asyncio.run(get_parsed_data(output))

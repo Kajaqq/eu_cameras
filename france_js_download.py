@@ -1,5 +1,7 @@
-import httpx
-from utils import download, CONSTANTS
+import asyncio
+
+import aiohttp
+from utils import CONSTANTS, get_http_settings, download
 import re
 
 BASE_URL = CONSTANTS.FRANCE.OTHER.BASE_URL
@@ -8,32 +10,34 @@ HTTPS_PREFIX = CONSTANTS.COMMON.HTTPS_PREFIX
 CAMERA_SUFFIX = CONSTANTS.FRANCE.OTHER.CAMERA_SUFFIX
 
 
-def get_auth_key(url):
+async def get_auth_key(session, url):
     key = None
-    with httpx.stream("GET", url) as r:
+    async with session.get(url) as r:
         r.raise_for_status()
-        for line in r.iter_lines():
+        async for line in r.content:
+            line_text = line.decode("utf-8")
             try:
-                if line.startswith("WT3_AuthenticateWebSite"):
-                    line = line.split("'")
-                    key = line[3]
+                if line_text.startswith("WT3_AuthenticateWebSite"):
+                    parts = line_text.split("'")
+                    key = parts[3]
                     break
-            except (IndexError, httpx.HTTPError) as e:
-                print(f"Error: {e}")
+            except (IndexError, Exception) as e:
+                print(f"Error parsing auth key: {e}")
     return key
 
 
-def get_phase2(key, url=AUTH_URL):
+async def get_phase2(session, key, url=AUTH_URL):
     url = url.format(key=key)
-    phase2 = download(url).split(";")
+    content = await download(session, url)
+    phase2 = content.split(";")
     phase2 = [x for x in phase2 if x.startswith("WT3_SawtLinkToPhase2.src =")]
     phase2_url = phase2[0].split("'")[1]
     phase2_url = HTTPS_PREFIX + phase2_url
     return phase2_url
 
 
-def parse_phase2(phase2_url):
-    p2 = download(phase2_url)
+async def parse_phase2(session, phase2_url):
+    p2 = await download(session, phase2_url)
     return p2.split(";")
 
 
@@ -96,20 +100,20 @@ def assemble_url(phase2_list, var_values):
 
 
 # noinspection PyShadowingNames
-def main():
-   # print("Downloading data")
-    auth_key = get_auth_key(BASE_URL)
-    phase_2_url = get_phase2(auth_key)
-    phase_2_list = parse_phase2(phase_2_url)
-    resolved_vars = resolve_js_variables(phase_2_list)
-    full_url = assemble_url(phase_2_list, resolved_vars)
-    camera_data = download(full_url)
-   # print ("Successfully downloaded data.")
+async def main():
+    timeout, connector = get_http_settings()
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        auth_key = await get_auth_key(session, BASE_URL)
+        phase_2_url = await get_phase2(session, auth_key)
+        phase_2_list = await parse_phase2(session, phase_2_url)
+        resolved_vars = resolve_js_variables(phase_2_list)
+        full_url = assemble_url(phase_2_list, resolved_vars)
+        camera_data = await download(session, full_url)
     return camera_data
 
 
 if __name__ == "__main__":
-    js_data = main()
+    js_data = asyncio.run(main())
     with open("data/webcams_fr_other.js", "w", encoding="utf-8") as f:
         f.write(js_data)
         print("Downloaded France js data to webcams_fr_other.js")

@@ -1,13 +1,15 @@
 import asyncio
 from pathlib import Path
 import aiofiles
-import httpx
+import aiohttp
 from tqdm.asyncio import tqdm
 
 import diff_hash
-from utils import save_json, load_json, create_url, HTTPError, CONSTANTS
+from utils import save_json, load_json, create_url, CONSTANTS, get_http_settings
 
 SEP = CONSTANTS.COMMON.SEPARATOR
+DEFAULT_RATE_LIMIT = CONSTANTS.COMMON.RATE_LIMIT
+
 
 def get_camera_data(json_data):
     country = json_data[0]["highway"]["country"]
@@ -39,29 +41,29 @@ async def check_camera_async(
     async with rate_limiter:
         response_bytes = b""
         try:
-            response = await client.get(url, timeout=10.0, follow_redirects=True)
-            response.raise_for_status()
-            if len(response.content) < 1000:
-                raise HTTPError(f'Response too small: {len(response.content)} bytes')
+            async with client.get(url, allow_redirects=True) as response:
+                response.raise_for_status()
+                response_bytes = await response.read()
+                status_code = response.status
+            if len(response_bytes) < 1000:
+                raise aiohttp.ClientPayloadError(
+                    f"Response too small: {len(response_bytes)} bytes"
+                )
             if not download:
                 return {"id": camera_id, "alive": status_code}
             filename = f"{camera_id}{ext}"
             file_path = Path.joinpath(output_dir, filename)
-            async with aiofiles.open(file_path, mode='wb') as f:
-                await f.write(response.content)
-            return {'id': camera_id, 'alive': response.status_code}
+            async with aiofiles.open(file_path, mode="wb") as f:
+                await f.write(response_bytes)
+            return {"id": camera_id, "alive": status_code}
+
         except (
-            httpx.HTTPStatusError,
-            httpx.RequestError,
-            HTTPError,
-            httpx.RemoteProtocolError,
-            httpx.ConnectError,
-            httpx.ReadTimeout,
+            aiohttp.ClientError,
+            asyncio.TimeoutError,
+            aiohttp.ClientPayloadError,
         ):
-            file_len = 0
-            if response is not None:
-                file_len = len(response.content)
-            return {'id': camera_id, 'alive': False, 'len': file_len}
+            # print(f'Error checking camera {camera_id}: {e}')
+            return {"id": camera_id, "alive": False, "len": len(response_bytes)}
 
 
 def remove_offline_cameras(camera_json, errored_cameras, output_file: Path):
@@ -94,7 +96,6 @@ def remove_offline_cameras(camera_json, errored_cameras, output_file: Path):
 async def main(camera_json, rate_limit=DEFAULT_RATE_LIMIT, download=True):
     # Download camera data
     source, camera_ids = get_camera_data(camera_json)
-    output_dir = Path('data/images/')
 
     # Set up the output path
     output_dir = Path("data/images/")
@@ -103,7 +104,11 @@ async def main(camera_json, rate_limit=DEFAULT_RATE_LIMIT, download=True):
 
     rate_limiter = asyncio.Semaphore(rate_limit)
 
-    async with httpx.AsyncClient() as client:
+    # Set up aiohttp client
+    timeout, connector = get_http_settings(rate_limit=rate_limit)
+
+    # Run the checks
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as client:
         tasks = [
             check_camera_async(
                 client, source, cam_id, cam_type, rate_limiter, download, output_dir

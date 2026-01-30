@@ -2,9 +2,10 @@ import json
 import re
 from collections import defaultdict
 
+import aiohttp
 from lambert import Lambert93, convertToWGS84Deg
 
-from utils import download, french_timestamp, save_json, CONSTANTS
+from utils import download, french_timestamp, save_json, CONSTANTS, get_http_settings
 
 BASE_URL = CONSTANTS.FRANCE.BASE_URL
 TIMESTAMP_URL = BASE_URL + CONSTANTS.FRANCE.TIMESTAMP_URL
@@ -15,17 +16,17 @@ ROAD_REGEX = re.compile(r"\b([A|N|D|M])(\d+)\b")
 PR_REGEX = re.compile(r"PR\s*(\d+)(?:\+(\d+))?")
 
 
-def get_url():
-    timestamp = download(TIMESTAMP_URL)
+async def get_url(session):
+    timestamp = await download(url=TIMESTAMP_URL, session=session)
     timestamp = int(timestamp[1:-1])
     timestamp = french_timestamp(timestamp)
     download_link = CAMERA_URL.format(datetime=timestamp)
     return download_link
 
 
-def get_camera_data():
-    download_link = get_url()
-    data = download(download_link)
+async def get_camera_data(session):
+    download_link = await get_url(session)
+    data = await download(url=download_link, session=session)
     return data
 
 
@@ -103,13 +104,17 @@ def parse_gov_cameras(baguettes, output_file):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
-def get_parsed_data(output_file = None):
-    camera_data = get_camera_data()
+
+async def get_parsed_data(output_file=None):
+    timeout, connector = get_http_settings()
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        camera_data = await get_camera_data(session=session)
     france_cameras = parse_gov_cameras(camera_data, output_file)
     return france_cameras
 
 
 if __name__ == "__main__":
-    OUTPUT_DIR = 'data/cameras_fr_gov.json'
-    baguette = get_camera_data()
-    parse_gov_cameras(baguette, OUTPUT_DIR)
+    import asyncio
+
+    OUTPUT_DIR = "data/cameras_fr_gov.json"
+    asyncio.run(get_parsed_data(output_file=OUTPUT_DIR))

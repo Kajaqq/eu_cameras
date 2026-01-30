@@ -2,10 +2,11 @@ import datetime
 import json
 import math
 import pathlib
+import socket
 from typing import Optional, Union
 from zoneinfo import ZoneInfo
 
-import httpx
+import aiohttp
 
 
 class CONSTANTS:
@@ -61,30 +62,50 @@ class HTTPError(Exception):
     pass
 
 
-def download(url: str, timeout: float = 30.0) -> str:
+def get_http_settings(
+    timeout_int=CONSTANTS.COMMON.HTTP_TIMEOUT, rate_limit=CONSTANTS.COMMON.RATE_LIMIT
+):
+    timeout = aiohttp.ClientTimeout(total=timeout_int)
+    resolver = aiohttp.AsyncResolver(nameservers=["8.8.8.8", "1.1.1.1"])
+    connector = aiohttp.TCPConnector(
+        resolver=resolver, limit=rate_limit, ttl_dns_cache=300, family=socket.AF_INET
+    )
+    return timeout, connector
+
+
+async def download(
+    url: str, timeout: float = CONSTANTS.COMMON.HTTP_TIMEOUT, session: Optional = None
+) -> str:
     """Download content from URL with proper error handling and timeout"""
+    if session is None:
+        timeout_ctx, connector = get_http_settings(timeout)
+        session = aiohttp.ClientSession(timeout=timeout_ctx, connector=connector)
     try:
-        with httpx.Client(timeout=timeout) as client:
-            response = client.get(url)
-            response.raise_for_status()
-            return response.text
-    except httpx.RequestError as e:
+        async with session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                return await response.text()
+    except aiohttp.ClientError as e:
         raise HTTPError(f"Request failed for {url}: {e}") from e
-    except httpx.HTTPStatusError as e:
-        raise HTTPError(f"HTTP {e.response.status_code} for {url}") from e
 
 
-def download_post(url: str, data: Optional[dict] = None, timeout: float = 30.0) -> str:
+async def download_post(
+    url: str,
+    data: Optional[dict] = None,
+    timeout: float = CONSTANTS.COMMON.HTTP_TIMEOUT,
+    session: Optional = None,
+) -> str:
     """Download content via POST with proper error handling and timeout"""
+    if session is None:
+        timeout_ctx, connector = get_http_settings(timeout)
+        session = aiohttp.ClientSession(timeout=timeout_ctx, connector=connector)
     try:
-        with httpx.Client(timeout=timeout) as client:
-            response = client.post(url, json=data)
-            response.raise_for_status()
-            return response.text
-    except httpx.RequestError as e:
+        async with session:
+            async with session.post(url, json=data) as response:
+                response.raise_for_status()
+                return await response.text()
+    except aiohttp.ClientError as e:
         raise HTTPError(f"POST request failed for {url}: {e}") from e
-    except httpx.HTTPStatusError as e:
-        raise HTTPError(f"HTTP {e.response.status_code} for {url}") from e
 
 
 def unix_to_datetime(timestamp: Union[int, float, str]) -> datetime.datetime:

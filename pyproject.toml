@@ -6,7 +6,6 @@ requires-python = ">=3.14"
 dependencies = [
     "aiofiles>=25.1.0",
     "dhash>=1.4",
-    "httpx>=0.28.1",
     "pillow>=12.1.0",
     "pybktree>=1.1",
     "ruff>=0.14.14",
@@ -15,4 +14,6 @@ dependencies = [
     "tzdata>=2025.3",
     "lambert==1.0.0",
     "pip-system-certs>=5.3",
+    "aiohttp>=3.13.3",
+    "aiodns>=4.0.0",
 ]

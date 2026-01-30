@@ -5,9 +5,10 @@ import france_js_download
 from collections import defaultdict
 from utils import save_json
 
-def get_parsed_data(output_file, input_data=None):
+
+async def get_parsed_data(output_file, input_data=None):
     if not input_data:
-        input_data = france_js_download.main()
+        input_data = await france_js_download.main()
     final_output = []
     try:
         data_string = input_data.strip()
@@ -73,4 +74,6 @@ def get_parsed_data(output_file, input_data=None):
 
 
 if __name__ == "__main__":
-    get_parsed_data("data/cameras_fr_other.json")
+    import asyncio
+
+    asyncio.run(get_parsed_data("data/cameras_fr_other.json"))
