@@ -27,7 +27,7 @@ class CONSTANTS:
             BASE_URL = "https://www.autoroutes.fr/webtrafic/desktop/webcams_en.html"
             AUTH_URL = "https://wt3.autoroutes-trafic.fr/authentication/?key={key}&base=www.autoroutes.fr&div=blocwebtrafic"
             CAMERA_SUFFIX = "webcams.js"
-            VIDEO_EXT = '.flv'
+            VIDEO_EXT = ".flv"
             CAMERA_URL = (
                 "https://gieat.viewsurf.com?id={camera_id}&action=mediaRedirect"
             )
@@ -53,6 +53,7 @@ class CONSTANTS:
 
 class HTTPError(Exception):
     """Custom exception for HTTP errors"""
+
     pass
 
 
@@ -99,14 +100,14 @@ def xor_decode(msg: bytes, key: str) -> str:
     """XOR decode message with a given key"""
 
     # Using bytearray for faster XOR operations
-    key = key.encode('utf-8')
+    key = key.encode("utf-8")
     key_len = len(key)
 
     decoded = bytearray(len(msg))
     for i in range(len(msg)):
         decoded[i] = msg[i] ^ key[i % key_len]
 
-    return decoded.decode('utf-8')
+    return decoded.decode("utf-8")
 
 
 def save_json(json_data: Union[str, dict, list], output: pathlib.Path) -> None:
@@ -114,14 +115,14 @@ def save_json(json_data: Union[str, dict, list], output: pathlib.Path) -> None:
     output_dir = pathlib.Path(output).parent
     output_dir.mkdir(parents=True, exist_ok=True)
     if output.exists():
-        output=output.with_name(f"{output.stem}_other.json")
+        output = output.with_name(f"{output.stem}_other.json")
     try:
         # Handle both string and already parsed JSON data
         if isinstance(json_data, str):
-            with open(output, 'w', encoding='utf-8') as outfile:
+            with open(output, "w", encoding="utf-8") as outfile:
                 outfile.write(json_data)
         else:
-            with open(output, 'w', encoding='utf-8') as outfile:
+            with open(output, "w", encoding="utf-8") as outfile:
                 json.dump(json_data, outfile, indent=4, ensure_ascii=False)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON data: {e}") from e
@@ -132,7 +133,7 @@ def save_json(json_data: Union[str, dict, list], output: pathlib.Path) -> None:
 def load_json(filename: str) -> dict:
     """Load JSON data from a file with proper error handling"""
     try:
-        with open(filename, 'r', encoding='utf-8') as infile:
+        with open(filename, "r", encoding="utf-8") as infile:
             return json.load(infile)
     except IOError as e:
         raise IOError(f"Failed to read file {filename}: {e}") from e
@@ -141,14 +142,14 @@ def load_json(filename: str) -> dict:
 
 
 def create_url(base, camera_id, camera_type):
-    ext = ''
+    ext = ""
     if base == "FR":
         base_url = CONSTANTS.FRANCE.CAMERA_URL
-        if camera_type == 'vid':
+        if camera_type == "vid":
             ext = CONSTANTS.FRANCE.VIDEO_EXT
-        elif camera_type == 'img':
+        elif camera_type == "img":
             ext = CONSTANTS.FRANCE.IMAGE_EXT
-        elif camera_type == 'other':
+        elif camera_type == "other":
             base_url = CONSTANTS.FRANCE.OTHER.CAMERA_URL
             ext = CONSTANTS.FRANCE.OTHER.VIDEO_EXT
             return base_url.format(camera_id=camera_id), ext
@@ -170,7 +171,7 @@ def timestamp_normalize(timestamp: Union[int, float]) -> float:
     # If the timestamp has more than 10 digits (milliseconds, microseconds, etc.)
     if timestamp_len > 10:
         zeros_to_remove = timestamp_len - 10
-        divisor = 10 ** zeros_to_remove
+        divisor = 10**zeros_to_remove
         return float(timestamp) / divisor
 
     return float(timestamp)

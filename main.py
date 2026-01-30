@@ -3,7 +3,7 @@ import spain_parser
 import france_gov_parser
 import france_js_parse
 import camera_check
-import asyncio
+
 from utils import CONSTANTS
 
 SEP = CONSTANTS.COMMON.SEPARATOR

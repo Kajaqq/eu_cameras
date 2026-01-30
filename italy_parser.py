@@ -11,12 +11,13 @@ def get_camera_data(url=BASE_URL):
     json_data = download(url)
     return json.loads(json_data)
 
+
 def parse_italy_cameras(raw_data):
     grouped_highways = defaultdict(list)
-    
+
     # The raw data contains a "webcams" list
     webcams = raw_data.get("webcams", [])
-    
+
     for cam in webcams:
         highway_name = cam.get("c_str", "Unknown")
 
@@ -31,7 +32,7 @@ def parse_italy_cameras(raw_data):
         # Determine a direction (+ ascending, - descending, * unknown)
         km_ini = cam.get("n_prg_km_ini")
         km_fin = cam.get("n_prg_km_fin")
-        
+
         if km_ini is not None and km_fin is not None:
             if km_ini < km_fin:
                 direction = "+"
@@ -78,6 +79,7 @@ def get_parsed_data(output_file=None):
     if output_file:
         save_json(parsed_data, output_file)
     return parsed_data
+
 
 if __name__ == "__main__":
     output = Path('data/cameras_it.json')

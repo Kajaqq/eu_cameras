@@ -71,5 +71,6 @@ def get_parsed_data(output_file, input_data=None):
         print(f"An unexpected error occurred: {e}")
     return final_output
 
+
 if __name__ == "__main__":
     get_parsed_data("data/cameras_fr_other.json")

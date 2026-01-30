@@ -34,31 +34,23 @@ def parse_camera_data(json_data, output_file=None):
         raw_data = json.loads(json_data)
 
         grouped_highways = defaultdict(list)
-        camaras = raw_data.get('camaras') or []
+        camaras = raw_data.get("camaras") or []
         for cam in camaras:
-            highway_name = cam.get('carretera') or 'Unknown'
-            grouped_highways[highway_name].append({
-                "camera_id": cam.get('idCamara'),
-                "camera_km_point": cam.get('pk'),
-                "camera_view": cam.get('sentido'),
-                "camera_type": "",
-                "coords": {
-                    "X": cam.get('coordX'),
-                    "Y": cam.get('coordY')
+            highway_name = cam.get("carretera") or "Unknown"
+            grouped_highways[highway_name].append(
+                {
+                    "camera_id": cam.get("idCamara"),
+                    "camera_km_point": cam.get("pk"),
+                    "camera_view": cam.get("sentido"),
+                    "camera_type": "",
+                    "coords": {"X": cam.get("coordX"), "Y": cam.get("coordY")},
                 }
-            })
+            )
 
         final_output = [
-            {
-                "highway": {
-                    "name": name,
-                    "country": "ES",
-                    "cameras": cameras
-                }
-            }
+            {"highway": {"name": name, "country": "ES", "cameras": cameras}}
             for name, cameras in grouped_highways.items()
         ]
-
 
         print(f"Successfully parsed {len(camaras)} cameras.")
         print(f"Data grouped by {len(final_output)} highways.")
@@ -76,6 +68,7 @@ def get_parsed_data(output_file=None):
     camera_data = get_camera_data()
     spain_data = parse_camera_data(camera_data, output_file)
     return spain_data
+
 
 if __name__ == "__main__":
     OUTPUT_DIR = 'data/cameras_es_gov.json'

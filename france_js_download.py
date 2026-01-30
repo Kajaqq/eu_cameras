@@ -40,9 +40,9 @@ def parse_phase2(phase2_url):
 def resolve_js_variables(lines, target_domain="www.autoroutes.fr"):
     var_map = {}
 
-    # regex to match: var NAME = 'VALUE' or var NAME = 'VALUE'.substring(start, end)
+    # regex to match: var NAME = 'VALUE' or "VALUE"
     var_pattern = re.compile(
-        r"var\s+(\w+)\s*=\s*'([^']*)'(?:\.substring\((\d+),(\d+)\))?"
+        r"var\s+(\w+)\s*=\s*['\"]([^'\"]*)['\"](?:\.substring\((\d+),(\d+)\))?"
     )
 
     for line in lines:
@@ -84,7 +84,7 @@ def assemble_url(phase2_list, var_values):
 
     if descriptor_line:
         # Extract the sum components: var X = A + B + C
-        parts_string = descriptor_line.split("=")[1].strip()
+        parts_string = descriptor_line.split("=")[1].strip().rstrip(";")
         var_names = [v.strip() for v in parts_string.split("+")]
 
         # Join the resolved values
@@ -113,5 +113,3 @@ if __name__ == "__main__":
     with open("data/webcams_fr_other.js", "w", encoding="utf-8") as f:
         f.write(js_data)
         print("Downloaded France js data to webcams_fr_other.js")
-
-
