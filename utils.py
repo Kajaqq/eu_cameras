@@ -11,9 +11,11 @@ import httpx
 class CONSTANTS:
     class COMMON:
         HTTPS_PREFIX = "https:"
-        SEPARATOR = '=' * 36
-        VIDEO_EXTENSIONS = ['.mp4', '.flv']
-        IMAGE_EXTENSIONS = ['.jpg', '.jpeg' ,'.png']
+        SEPARATOR = "=" * 36
+        VIDEO_EXTENSIONS = [".mp4", ".flv"]
+        IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"]
+        RATE_LIMIT = 50
+        HTTP_TIMEOUT = 20.00
 
     class FRANCE:
         BASE_URL = "https://www.bison-fute.gouv.fr/"
@@ -38,11 +40,13 @@ class CONSTANTS:
         CAMERA_API = "cache/getCamaras"
         XOR_KEY = "K"
         IMAGE_EXT = ".jpg"
+        RATE_LIMIT = 200
 
     class ITALY:
-        BASE_URL = 'https://viabilita.autostrade.it/json/webcams.json'
-        CAMERA_URL = 'https://video.autostrade.it/video-mp4_hq/'
-        VIDEO_EXT = '.mp4'
+        BASE_URL = "https://viabilita.autostrade.it/json/webcams.json"
+        CAMERA_URL = "https://video.autostrade.it/video-mp4_hq/"
+        VIDEO_EXT = ".mp4"
+        RATE_LIMIT = 30
 
     class POLAND:
         pass

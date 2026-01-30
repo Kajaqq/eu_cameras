@@ -35,7 +35,6 @@ def convert_to_wgs84(lon, lat):
 
 
 def parse_gov_cameras(baguettes, output_file):
-
     try:
         raw_data = json.loads(baguettes)
 

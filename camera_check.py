@@ -27,7 +27,7 @@ def get_camera_data(json_data):
 
 
 async def check_camera_async(
-    client, source, camera_id, camera_type, rate_limit, download, output_dir
+    client, source, camera_id, camera_type, rate_limiter, download, output_dir
 ):
     if source in ["ES", "FR"]:
         url, ext = create_url(source, camera_id, camera_type)
@@ -35,8 +35,9 @@ async def check_camera_async(
         url = camera_type
         ext = CONSTANTS.ITALY.VIDEO_EXT
     else:
-        raise ValueError(f'Unknown source: {source}')
-    async with rate_limit:
+        raise ValueError(f"Unknown source: {source}")
+    async with rate_limiter:
+        response_bytes = b""
         try:
             response = await client.get(url, timeout=10.0, follow_redirects=True)
             response.raise_for_status()
@@ -78,14 +79,20 @@ def remove_offline_cameras(camera_json, errored_cameras, output_file: Path):
         diff = original_count - len(highway["cameras"])
         if diff > 0:
             removed_count += diff
-            print(f'Removed {diff} cameras from {highway.get('name', 'Unknown')}')
+            print(f"Removed {diff} cameras from {highway.get('name', 'Unknown')}")
+
+        # Remove the whole highway object if no cameras are left
+        if not highway["cameras"]:
+            camera_json.remove(highway_item)
+            print(f"Removed empty highway: {highway.get('name', 'Unknown')}")
 
     save_json(camera_json, output_file)
     print(SEP)
     print(f"Total removed: {removed_count}. Filtered data saved to {output_file}")
 
 
-async def main(camera_json, rate_limit=20, download=True):
+async def main(camera_json, rate_limit=DEFAULT_RATE_LIMIT, download=True):
+    # Download camera data
     source, camera_ids = get_camera_data(camera_json)
     output_dir = Path('data/images/')
 
