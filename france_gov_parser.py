@@ -24,9 +24,8 @@ async def get_url(session):
     return download_link
 
 
-async def get_camera_data(session):
-    download_link = await get_url(session)
-    data = await download(url=download_link, session=session)
+async def get_camera_data(session, url):
+    data = await download(url=url, session=session)
     return data
 
 
@@ -108,7 +107,8 @@ def parse_gov_cameras(baguettes, output_file):
 async def get_parsed_data(output_file=None):
     timeout, connector = get_http_settings()
     async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-        camera_data = await get_camera_data(session=session)
+        camera_url = await get_url(session=session)
+        camera_data = await get_camera_data(url=camera_url, session=session)
     france_cameras = parse_gov_cameras(camera_data, output_file)
     return france_cameras
 

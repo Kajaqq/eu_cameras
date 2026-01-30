@@ -28,7 +28,7 @@ async def get_auth_key(session, url):
 
 async def get_phase2(session, key, url=AUTH_URL):
     url = url.format(key=key)
-    content = await download(session, url)
+    content = await download(url=url, session=session)
     phase2 = content.split(";")
     phase2 = [x for x in phase2 if x.startswith("WT3_SawtLinkToPhase2.src =")]
     phase2_url = phase2[0].split("'")[1]
@@ -37,7 +37,7 @@ async def get_phase2(session, key, url=AUTH_URL):
 
 
 async def parse_phase2(session, phase2_url):
-    p2 = await download(session, phase2_url)
+    p2 = await download(url=phase2_url, session=session)
     return p2.split(";")
 
 
@@ -108,7 +108,7 @@ async def main():
         phase_2_list = await parse_phase2(session, phase_2_url)
         resolved_vars = resolve_js_variables(phase_2_list)
         full_url = assemble_url(phase_2_list, resolved_vars)
-        camera_data = await download(session, full_url)
+        camera_data = await download(url=full_url, session=session)
     return camera_data
 
 

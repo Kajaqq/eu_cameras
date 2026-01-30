@@ -47,7 +47,7 @@ class CONSTANTS:
         BASE_URL = "https://viabilita.autostrade.it/json/webcams.json"
         CAMERA_URL = "https://video.autostrade.it/video-mp4_hq/"
         VIDEO_EXT = ".mp4"
-        RATE_LIMIT = 30
+        RATE_LIMIT = 25
 
     class POLAND:
         pass
@@ -80,13 +80,21 @@ async def download(
     if session is None:
         timeout_ctx, connector = get_http_settings(timeout)
         session = aiohttp.ClientSession(timeout=timeout_ctx, connector=connector)
+        should_close = True
+    else:
+        should_close = False
     try:
-        async with session:
+        if should_close:
+            async with session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    return await response.text()
+        else:
             async with session.get(url) as response:
                 response.raise_for_status()
                 return await response.text()
     except aiohttp.ClientError as e:
-        raise HTTPError(f"Request failed for {url}: {e}") from e
+        raise HTTPError(f"GET request failed for {url}: {e}") from e
 
 
 async def download_post(
@@ -99,8 +107,16 @@ async def download_post(
     if session is None:
         timeout_ctx, connector = get_http_settings(timeout)
         session = aiohttp.ClientSession(timeout=timeout_ctx, connector=connector)
+        should_close = True
+    else:
+        should_close = False
     try:
-        async with session:
+        if should_close:
+            async with session:
+                async with session.post(url, json=data) as response:
+                    response.raise_for_status()
+                    return await response.text()
+        else:
             async with session.post(url, json=data) as response:
                 response.raise_for_status()
                 return await response.text()
