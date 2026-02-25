@@ -1,10 +1,37 @@
+import math
 from pathlib import Path
-from typing import Any
-
-from tools.utils import load_json, save_json
+from tools.utils import load_json, get_country
 from config import CONSTANTS
 
+# ==========================================
+# MASTER HIGHWAY SORTING LISTS
+# ==========================================
+UK_NORTH_SOUTH = CONSTANTS.UK.HighwaySort.NORTH_SOUTH
+UK_EAST_WEST = CONSTANTS.UK.HighwaySort.EAST_WEST
+UK_RINGS = CONSTANTS.UK.HighwaySort.RINGS
 
+ES_NORTH_SOUTH = CONSTANTS.SPAIN.HighwaySort.NORTH_SOUTH
+ES_EAST_WEST = CONSTANTS.SPAIN.HighwaySort.EAST_WEST
+ES_RINGS = CONSTANTS.SPAIN.HighwaySort.RINGS
+
+FR_NORTH_SOUTH = CONSTANTS.FRANCE.HighwaySort.NORTH_SOUTH
+FR_EAST_WEST = CONSTANTS.FRANCE.HighwaySort.EAST_WEST
+FR_RINGS = CONSTANTS.FRANCE.HighwaySort.RINGS
+
+IT_NORTH_SOUTH = CONSTANTS.ITALY.HighwaySort.NORTH_SOUTH
+IT_EAST_WEST = CONSTANTS.ITALY.HighwaySort.EAST_WEST
+IT_RINGS = CONSTANTS.ITALY.HighwaySort.RINGS
+
+COUNTRY_SORT_MAP = {
+    "UK": (UK_NORTH_SOUTH, UK_EAST_WEST, UK_RINGS),
+    "ES": (ES_NORTH_SOUTH, ES_EAST_WEST, ES_RINGS),
+    "FR": (FR_NORTH_SOUTH, FR_EAST_WEST, FR_RINGS),
+    "IT": (IT_NORTH_SOUTH, IT_EAST_WEST, IT_RINGS),
+}
+
+# ==========================================
+# LOOP CONSTANTS
+# ==========================================
 SEP = CONSTANTS.COMMON.SEPARATOR
 DEFAULT_INTERVAL = CONSTANTS.COMMON.SLIDESHOW_INTERVAL
 COUNTRY_MAP = CONSTANTS.COMMON.COUNTRY_MAP
@@ -15,129 +42,131 @@ HIGHWAY_SEQUENCES = {
     "Spain": CONSTANTS.SPAIN.HIGHWAY_SEQUENCE,
     "France": CONSTANTS.FRANCE.HIGHWAY_SEQUENCE,
     "Italy": CONSTANTS.ITALY.HIGHWAY_SEQUENCE,
+    "UK": CONSTANTS.UK.HIGHWAY_SEQUENCE,
 }
 
 
-class NoCamerasProvided(Exception):
-    pass
+def get_ring_cameras_angle(cameras):
+    """Sorts clockwise around geographic center"""
+    if not cameras:
+        return lambda cam: 0
+
+    center_x = sum(cam["coords"]["X"] for cam in cameras) / len(cameras)
+    center_y = sum(cam["coords"]["Y"] for cam in cameras) / len(cameras)
+
+    def get_clockwise_angle(cam):
+        angle = math.atan2(cam["coords"]["X"] - center_x, cam["coords"]["Y"] - center_y)
+        if angle < 0:
+            angle += 2 * math.pi
+        return angle
+
+    return get_clockwise_angle
 
 
-def select_cameras(
-    cameras: list[dict], allocation: int
-) -> list[Any] | tuple[list[dict], bool] | list[dict]:
-    """
-    Select cameras to show
-
-    1. Always select the camera with the lowest KM point (start)
-    2. Always select the camera with the highest KM point (end)
-    3. Divide remaining cameras evenly across the distance
-    """
-
-    if not cameras or allocation <= 0:
-        raise NoCamerasProvided("No cameras could be read from the provided data.")
-
-    # Sort cameras by kilometer point
-    sorted_cameras = sorted(cameras, key=lambda c: c["camera_km_point"])
-
-    if allocation == 1:
-        return [sorted_cameras[0]]
-
-    # Get the camera at the start and the camera at the end
-    selected = [sorted_cameras[0], sorted_cameras[-1]]
-
-    if allocation == 2:
-        return selected
-
-    # Get middle cameras
-    pool = sorted_cameras[1:-1]
-    start_km = sorted_cameras[0]["camera_km_point"]
-    total_distance = sorted_cameras[-1]["camera_km_point"] - start_km
-    interval = total_distance / (allocation - 1)
-
-    for i in range(1, allocation - 1):
-        if not pool:  # No more cameras to select
-            break
-
-        target_km = start_km + (i * interval)  # Calculate the target KM point
-        # Find closest camera to target_km
-        closest_camera = min(pool, key=lambda c: abs(c["camera_km_point"] - target_km))
-
-        selected.append(closest_camera)
-        pool.remove(closest_camera)
-
-    return sorted(selected, key=lambda c: c["camera_km_point"])
+def get_sort_order(country_code: str = "UK"):
+    # Returns empty lists if country code is not found, preventing crashes
+    return COUNTRY_SORT_MAP.get(country_code.upper(), ([], [], []))
 
 
-def filter_cameras(
-    input_data: Path | str | list | dict,
-    highway_seq: list[tuple] | None = None,
-    save_loop: bool = True,
-) -> list[dict]:
+def sort_cameras(cameras,country, highway: str):
+    if not cameras:
+        return []
 
-    data = load_json(input_data)
+    ns, ew, rings = get_sort_order(country)
 
-    country = data[0]["highway"]["country"]
+    if highway in ns:
+        cameras.sort(key=lambda cam: cam["coords"]["Y"])
+        return cameras
+
+    elif highway in ew:
+        cameras.sort(key=lambda cam: cam["coords"]["X"])
+        return cameras
+
+    elif highway in rings:
+        cameras.sort(key=get_ring_cameras_angle(cameras))
+        return cameras
+
+    else:
+        print(
+            f"  [Info] Highway {highway} not explicitly categorized. Defaulting to Y-sort."
+        )
+        cameras.sort(key=lambda cam: cam["coords"]["Y"])
+        return cameras
+
+
+def sample_cameras(cameras, target_count, highway_name=None):
+    if not cameras or target_count <= 0:
+        return []
+    cameras_len = len(cameras)
+    if target_count >= cameras_len:
+        print( f"[WARN] Camera allocation for {highway_name} exceeds or equals camera count. Expected: {target_count} Got: {cameras_len}")
+        print(f"{highway_name}: Returning all {cameras_len} cameras.")
+        return cameras
+    print(f"{highway_name}: Selecting {target_count} cameras from {cameras_len} available.")
+    step = cameras_len / target_count
+    return [cameras[int(i * step)] for i in range(target_count)]
+
+
+def process_highway_sequence(cameras, sequence_list):
+    data_map = {item["highway"]["name"]: item["highway"]["cameras"] for item in cameras}
+    country = get_country(cameras)
+    final_playlist = []
+
+    for highway_name, count in sequence_list:
+        base_name = highway_name.split("_")[0]  # Split cameras support "A04_WEST" --> "A04"
+
+        if base_name not in data_map:
+            print(f"[WARN]: Highway {base_name} not found in JSON data.")
+            continue
+
+        raw_cameras = data_map[base_name]
+        filtered_cameras = raw_cameras  # Default to all cameras
+
+        # Italy A4 special case
+        if base_name == "A04" and country == "IT":
+            if "WEST" in highway_name:
+                filtered_cameras = [c for c in raw_cameras if c["coords"]["X"] < 9.2]
+            elif "CENTER" in highway_name:
+                filtered_cameras = [
+                    c for c in raw_cameras if 10.0 < c["coords"]["X"] < 12.0
+                ]
+            elif "EAST" in highway_name:
+                filtered_cameras = [c for c in raw_cameras if c["coords"]["X"] > 12.0]
+
+        if not filtered_cameras:
+            print(f"[WARN] Coordinate filter for {highway_name} returned 0 cameras. Skipping." )
+            continue
+
+        # 1. SORT
+        sorted_cams = sort_cameras(filtered_cameras, country, base_name)
+
+        # 2. SAMPLE
+        sampled = sample_cameras(sorted_cams, count, highway_name)
+
+        final_playlist.extend(sampled)
+
+    return final_playlist
+
+
+def main(data, loop_data=None):
+    data = load_json(data)
+    country = get_country(data)
     country_name = COUNTRY_MAP[country]
     print(SEP)
     print(f"Creating loop for {country_name}...")
-
-    if highway_seq is None:
-        highway_seq = HIGHWAY_SEQUENCES[country_name]
-
-    # Create a lookup dict for highway data
-    highway_lookup = {h["highway"]["name"]: h for h in data}
-
-    filtered_data = []
-    total_cameras_selected = 0
-
-    for highway_name, allocation in highway_seq:
-        if highway_data := highway_lookup.get(highway_name):
-            cameras = highway_data["highway"]["cameras"]
-
-            cameras_len = len(cameras)
-
-            if cameras_len <= allocation:
-                print(
-                    f"[WARN] Camera allocation for {highway_name} exceeds or equals camera count. Expected: {allocation} Got: {cameras_len}"
-                )
-                selected_cameras = cameras
-            else:
-                selected_cameras = select_cameras(cameras, allocation)
-
-            filtered_data.append(
-                {
-                    "highway": {
-                        "name": highway_name,
-                        "country": highway_data["highway"]["country"],
-                        "cameras": selected_cameras,
-                    }
-                }
-            )
-
-            count = len(selected_cameras)
-            total_cameras_selected += count
-            if cameras_len > count:
-                print(f"[OK] {highway_name}: {count}/{allocation} cameras selected")
-            else:
-                print(f"[WARN] {highway_name}: all cameras selected")
-        else:
-            print(f"[ERROR] {highway_name}: Not found in source data")
-
-    if save_loop:
-        output_file = DATA_DIR / f"{country_name}_loop.json"
-        save_json(filtered_data, output_file)
-        print(SEP)
-        print(f"Output written to: {output_file}")
-
     print(SEP)
-    print(f"Total cameras selected: {total_cameras_selected}")
-    running_time = (total_cameras_selected * DEFAULT_INTERVAL) / 60
-    print(f"Total running time: {running_time:.2f} minutes")
+    if not loop_data:
+        loop_data = HIGHWAY_SEQUENCES[country_name]
+    selected_cameras = process_highway_sequence(data, loop_data)
+    camera_ids = []
     print(SEP)
-
-    return filtered_data
+    print(f"Successfully compiled loop with {len(selected_cameras)} total cameras:")
+    print(SEP)
+    camera_ids.extend(cam["camera_id"] for cam in selected_cameras)
+    return camera_ids
 
 
 if __name__ == "__main__":
-    base_dir = Path(__file__).parent.parent / "data"
-    filter_cameras(base_dir / "cameras_es_online.json", save_loop=True)
+    json_file = Path(__file__).parent / "data" / "cameras_uk_online.json"
+    uk_loop_sequence = [("M20", 5), ("A282", 2),("M25", 8),]
+    main(json_file, uk_loop_sequence)

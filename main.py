@@ -4,7 +4,7 @@ from argparse import Namespace
 from Parsers import france_parser, italy_parser, spain_parser, uk_parser
 from tools.camera_check import main as camera_check
 from config import CONSTANTS
-from tools.create_camera_loop import filter_cameras as create_loop
+from tools.create_camera_loop import main as create_loop
 from tools.create_html import main as create_html_main
 
 SEP = CONSTANTS.COMMON.SEPARATOR
@@ -21,7 +21,7 @@ SPAIN_LOOP = CONSTANTS.SPAIN.HIGHWAY_SEQUENCE
 FRANCE_LOOP = CONSTANTS.FRANCE.HIGHWAY_SEQUENCE
 
 
-def create_html_files(input_data, output_dir, interval=DEFAULT_INTERVAL):
+def create_html_files(input_data, output_dir, camera_ids=None, interval=DEFAULT_INTERVAL):
     if interval < 3:
         print(f"Warning: Interval {interval}s is too short. Setting to minimum: 3s")
         interval = 3
@@ -33,10 +33,10 @@ def create_html_files(input_data, output_dir, interval=DEFAULT_INTERVAL):
         json_file=input_data,
         output_file=None,  # Let create_html.py determine the filename automatically
         output_dir=output_dir,
-        camera_ids=None,
+        camera_ids=camera_ids,
         highways=None,
         interval=interval,
-        no_sort=True,
+        sort=False,
         include_unknown=False,
     )
     create_html_main(args)
@@ -82,9 +82,8 @@ async def main():
     # create_html creates an html slideshow from the json file
     default_dir = JSON_OUTPUT_DIR
     save_raw = False
-    save_checked = False
-    save_loop = True
-    create_html = False
+    save_checked = True
+    create_html = True
 
     # SPAIN
     spain_data = await get_camera_data("Spain", save_raw, save_checked, default_dir)

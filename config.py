@@ -13,7 +13,7 @@ class CONSTANTS:
         HTTP_TIMEOUT = 20.00
         SLIDESHOW_INTERVAL = 7
         EARTH_RADIUS_KM = 6371.0
-        COUNTRY_MAP = {"ES": "Spain", "FR": "France", "IT": "Italy"}
+        COUNTRY_MAP = {"ES": "Spain", "FR": "France", "IT": "Italy", "UK": "UK"}
         DATA_DIR = PROJECT_ROOT / Path("data/")
         IMG_DIR_NAME = Path("images/")
         IMG_DIR = DATA_DIR / IMG_DIR_NAME
@@ -152,6 +152,35 @@ class CONSTANTS:
             CAMERA_URL = (
                 "https://gieat.viewsurf.com?id={camera_id}&action=mediaRedirect"
             )
+        class HighwaySort:
+            NORTH_SOUTH = [
+            "A-1",
+            "A-31",
+            "A-6",
+            "A-7",
+            "A-75",
+            "A-71",
+            "A-20",
+            "A-63",
+            "N-10",
+            "A-10",
+            "A-28",
+        ]
+            EAST_WEST = [
+            "A-16",
+            "A-2",
+            "A-26",
+            "A-29",
+            "A-4",
+            "A-36",
+            "A-40",
+            "A-43",
+            "A-48",
+            "A-62",
+            "A-11",
+            "A-8",
+        ]
+            RINGS = ["A-630"]  # Bordeaux Ring
 
     class SPAIN:
         BASE_URL = "https://etraffic.dgt.es/"
@@ -185,6 +214,17 @@ class CONSTANTS:
         XOR_KEY = "K"
         IMAGE_EXT = ".jpg"
         RATE_LIMIT = 150
+        class HighwaySort:
+            NORTH_SOUTH = ["A-1", "AP-7", "A-7", "AP-68", "A-68", "A-6", "A-4"]
+            EAST_WEST = [
+                "A-8",
+                "A-2",
+                "A-3",
+                "A-5",
+                "A-62",
+                "AP-68",
+            ]  # AP-68 is diagonal, but X works well
+            RINGS = ["Z-40", "V-30", "M-50", "M-40", "SE-30"]
 
     class ITALY:
         BASE_URL = "https://viabilita.autostrade.it/json/webcams.json"
@@ -192,26 +232,28 @@ class CONSTANTS:
         VIDEO_EXT = ".mp4"
         RATE_LIMIT = 25
         HIGHWAY_SEQUENCE = [
-            # --- THE ALPINE ARC (BORDERS) ---
+            # --- BORDERS ---
             # France (Coast)
             ("A10", 4),  # Ventimiglia (Km 158) -> Genoa
             # France (Mountain)
             ("A05", 4),  # Mont Blanc (Km 143) -> Aosta -> Turin
-            # France -> Milan Connector (NEW DATA)
-            ("A04", 4),  # Select from range Km 0 - 120 (Turin - Milan)
-            # Switzerland (Critical)
+            # France -> Milan Connector
+            ("A04_WEST", 4),  # Turin - Milan
+            # Switzerland
             ("A09", 5),  # Chiasso (Km 41) -> Como -> Milan
             ("A08", 3),  # Varese -> Milan (Lakes)
-            # Germany/Austria (THE BIG ONE - NEW DATA)
+            # Germany/Austria
             ("A22", 8),  # Brennero (Km 0) -> Bolzano -> Verona (Km 313)
             # Austria (East)
             ("A23", 4),  # Tarvisio (Km 119) -> Udine
-            # --- THE INDUSTRIAL NORTH (EAST-WEST) ---
-            # The "German Link" (Milan - Verona - Venice) - NEW DATA
-            ("A04", 5),  # Select from range Km 217 - 363 (Brescia - Padova)
-            # The Eastern Gate (Venice - Trieste) - NEW DATA
-            ("A04", 5),  # Select from range Km 363 - 525 (Venice - Trieste)
-            # --- THE SPINE (NORTH-SOUTH) ---
+
+            # --- EAST-WEST ---
+            # The "German Link" (Milan - Verona - Venice)
+            ("A04_CENTER", 5),  # Brescia - Padova
+            # The Eastern Gate (Venice - Trieste)
+            ("A04_EAST", 5),  # Venice - Trieste
+
+            # --- NORTH-SOUTH ---
             # Milan to Bologna
             ("A01", 6),  # Select from range Km 0 - 180
             # Bologna Hub & Adriatic (Fruit Route)
@@ -220,11 +262,12 @@ class CONSTANTS:
             # The Apennines (Florence/Rome)
             ("A01", 5),  # Select from range Km 240 - 300 (Mountain Pass)
             ("A01", 5),  # Select from range Km 300 - 550 (Florence - Rome)
-            # --- THE PORTS & SOUTH ---
+
+            # --- PORTS & SOUTH ---
             # Liguria/Tyrrhenian
             ("A12", 4),  # Genoa - Livorno
-            ("A07", 3),  # Milan - Genoa (The "Serravalle")
-            ("A26", 3),  # Gravellona - Genoa (The alternate)
+            ("A07", 3),  # Milan - Genoa
+            ("A26", 3),  # Gravellona - Genoa
             # Naples (NEW DATA)
             ("A01", 3),  # Rome - Naples (Km 550 - 750)
             ("A56", 5),  # Naples Tangenziale (High traffic)
@@ -252,6 +295,24 @@ class CONSTANTS:
             BASE_URL = "https://www.autobrennero.it/it/"
             CAMERA_KEYWORDS = ["var puntiWebcam= ", ";var puntiBarriere"]
 
+        class HighwaySort:
+            NORTH_SOUTH = [
+                "A10",
+                "A05",
+                "A09",
+                "A08",
+                "A22",
+                "A23",
+                "A01",
+                "A14",
+                "A12",
+                "A07",
+                "A26",
+                "A30",
+            ]
+            EAST_WEST = ["A04", "A16"]  # A04 is the big East-West Artery
+            RINGS = ["A56"]  # Naples Tangenziale
+
     class POLAND:
         pass
 
@@ -262,3 +323,74 @@ class CONSTANTS:
         CAMERA_URL = "https://public.highwaystrafficcameras.co.uk/cctvpublicaccess/images/"
         IMAGE_EXT = ".jpg"
         RATE_LIMIT = 125
+        class HighwaySort:
+            NORTH_SOUTH = [
+                "A1",
+                "A1(M)",
+                "A3",
+                "A3(M)",
+                "A19",
+                "A36",
+                "A38",
+                "A38(M)",
+                "A42",
+                "A46",
+                "A168",
+                "A282",
+                "A419",
+                "A453",
+                "A556",
+                "A585",
+                "A1001",
+                "M1",
+                "M5",
+                "M6",
+                "M11",
+                "M18",
+                "M23",
+                "M32",
+                "M40",
+                "M49",
+                "M53",
+                "M57",
+                "M61",
+                "M66",
+                "M69",
+                "M275",
+                "M621",
+            ]
+
+            EAST_WEST = [
+                "A2",
+                "A5",
+                "A13",
+                "A14",
+                "A27",
+                "A30",
+                "A50",
+                "A64",
+                "A303",
+                "A421",
+                "M2",
+                "M3",
+                "M4",
+                "M20",
+                "M26",
+                "M27",
+                "M45",
+                "M48",
+                "M50",
+                "M54",
+                "M55",
+                "M56",
+                "M62",
+                "M65",
+                "M180",
+                "M602",
+            ]
+
+            RINGS = [
+                "M25",  # London Orbital
+                "M60",  # Manchester Outer Ring
+                "M42",  # Birmingham Box (C-shaped, circular logic works best here)
+            ]
