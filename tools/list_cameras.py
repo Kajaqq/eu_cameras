@@ -1,8 +1,10 @@
 import sys
+from pathlib import Path
 
 from natsort import natsorted
 
 from config import CONSTANTS
+
 from tools.utils import load_json
 
 
@@ -37,6 +39,6 @@ def main(highway_data: list[tuple[str, int, str]]):
 
 if __name__ == "__main__":
     json_file = sys.argv[1]
-    json_data = load_json(json_file)
+    json_data = load_json(Path(json_file))
     parsed_data = parse_highways(json_data)
     main(parsed_data)

@@ -5,7 +5,7 @@ import aiohttp
 import winloop
 from tqdm.asyncio import tqdm
 
-from tools.utils import load_json, create_url, get_http_settings, save_json
+from tools.utils import load_json, create_url, get_http_settings, save_json, get_country
 import tools.diff_hash as diff_hash
 from config import CONSTANTS
 
@@ -24,7 +24,7 @@ async def save_image(camera_id, ext, img_bytes, output_dir=IMAGE_DIR):
 
 
 def get_camera_data(json_data: dict):
-    country = json_data[0]["highway"]["country"]
+    country = get_country(json_data)
     if country == "IT":
         camera_ids = [
             [camera["camera_id"], camera["url"]]

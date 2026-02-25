@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from natsort import natsorted
 
-from tools.utils import create_url, load_json
+from tools.utils import create_url, load_json, get_country
 from config import CONSTANTS
 
 COUNTRY_MAP = CONSTANTS.COMMON.COUNTRY_MAP
@@ -545,9 +545,9 @@ def parse_args():
         help="Whether to include unknown cameras (default: false)",
     )
     parser.add_argument(
-        "--no-sort",
+        "--sort",
         action="store_true",
-        help="Preserve the order of highways from the input JSON (useful for strategic loops)",
+        help="Sort the cameras naturally",
     )
     arguments = parser.parse_args()
 
@@ -570,8 +570,8 @@ def main(args):
     if args.highways:
         highways_list = [hw.strip() for hw in args.highways.split(",")]
 
-    # Get camera URLs (apply sorting unless specific camera IDs are provided)
-    apply_sort = (args.camera_ids is None) and (not args.no_sort)
+    # Get camera URLs
+    apply_sort = args.sort
     cameras, country = get_camera_urls(
         json_data, args.camera_ids, highways_list, apply_sort
     )
