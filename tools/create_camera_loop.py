@@ -229,7 +229,7 @@ def main(data, loop_data=None):
     selected_cameras = process_highway_sequence(data, loop_data, country)
     camera_ids = []
     print(SEP)
-    print(f"Successfully compiled loop with {len(selected_cameras)} total cameras:")
+    print(f"Successfully compiled loop with {len(selected_cameras)} total cameras")
     print(SEP)
     camera_ids.extend(cam["camera_id"] for cam in selected_cameras)
     return camera_ids
