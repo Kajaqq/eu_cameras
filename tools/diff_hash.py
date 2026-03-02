@@ -17,7 +17,7 @@ Camera = collections.namedtuple("Camera", "bits id")
 
 def get_video_frame(video_file: Path):
     output_path = video_file.with_suffix(".png")
-    input_file = ffmpeg.input(video_file, ss='00:00:00')
+    input_file = ffmpeg.input(video_file, ss="00:00:00")
     scaled = input_file.scale(w=352, h=288)
     ffmpeg.output(scaled, filename=output_path, vframes=1).run(
         overwrite_output=True, quiet=True
@@ -76,7 +76,9 @@ def main(file_path=None):
             list(thread_executor.map(get_video_frame, video_files))
     if image_files or video_files:
         with ProcessPoolExecutor() as process_executor:
-            results = list(process_executor.map(get_image_hash, image_files, chunksize=100))
+            results = list(
+                process_executor.map(get_image_hash, image_files, chunksize=100)
+            )
 
     hash_list = [r for r in results if r is not None]
 
