@@ -1,6 +1,7 @@
 import json
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 import asyncio
 
 from Downloaders.spain_downloader import SpainDownloader
@@ -8,13 +9,33 @@ from Parsers.base_parser import BaseParser
 
 
 class SpainParser(BaseParser):
+    """
+    Parser for Spanish highway cameras (DGT).
+    """
+
     @property
     def country(self) -> str:
+        """
+        Property that returns the country code.
+
+        Returns:
+            str: The two-letter country code ('ES').
+        """
         return "ES"
 
-    async def parse(self, raw_data):
+    async def parse(self, raw_data: str | bytes) -> list[dict[str, Any]] | None:
+        """
+        Parses JSON data for Spanish highway cameras.
+
+        Args:
+            raw_data (str | bytes): The raw JSON string or bytes.
+
+        Returns:
+            list[dict[str, Any]] | None: A list of formatted highway camera dictionaries,
+                or None if parsing fails.
+        """
         try:
-            raw_data = json.loads(raw_data)
+            parsed_data = json.loads(raw_data)
         except json.JSONDecodeError:
             print("Error: Failed to decode the input JSON file.")
             return None
@@ -23,14 +44,14 @@ class SpainParser(BaseParser):
             return None
 
         try:
-            grouped_highways = defaultdict(list)
-            camaras = raw_data.get("camaras") or []
+            grouped_highways: dict[str, list[dict[str, Any]]] = defaultdict(list)
+            camaras: list[dict[str, Any]] = parsed_data.get("camaras") or []
             for cam in camaras:
-                highway_name = cam.get("carretera") or "Unknown"
+                highway_name: str = cam.get("carretera") or "Unknown"
                 cam_formatted = self.format_camera(
                     camera_id=cam.get("idCamara"),
                     camera_km_point=cam.get("pk"),
-                    camera_view=cam.get("sentido"),
+                    camera_view=cam.get("sentido", "*"),
                     camera_type="img",
                     coord_x=cam.get("coordX"),
                     coord_y=cam.get("coordY"),
@@ -48,7 +69,19 @@ class SpainParser(BaseParser):
             return final_output
 
 
-async def get_parsed_data(output_file=None, output_folder=None):
+async def get_parsed_data(
+    output_file: str | Path | None = None, output_folder: str | Path | None = None
+) -> Any:
+    """
+    Downloads and parses camera data for Spain.
+
+    Args:
+        output_file (str | Path | None, optional): Specific file path to save output. Defaults to None.
+        output_folder (str | Path | None, optional): Folder to save output according to country format. Defaults to None.
+
+    Returns:
+        Any: The parsed camera data.
+    """
     parser = SpainParser(downloader=SpainDownloader())
     return await parser.get_parsed_data(
         output_file=output_file, output_folder=output_folder

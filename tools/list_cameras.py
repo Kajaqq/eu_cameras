@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import Any
 
 from natsort import natsorted
 
@@ -8,23 +9,39 @@ from config import CONSTANTS
 from tools.utils import load_json
 
 
-COUNTRY_MAP = CONSTANTS.COMMON.COUNTRY_MAP
-SEPARATOR = CONSTANTS.COMMON.SEPARATOR
+COUNTRY_MAP: dict[str, str] = CONSTANTS.COMMON.COUNTRY_MAP
+SEPARATOR: str = CONSTANTS.COMMON.SEPARATOR
 
 
-def parse_highways(json_data: list[dict]) -> list[tuple[str, int, str]]:
-    highway_data = []
+def parse_highways(json_data: list[dict[str, Any]]) -> list[tuple[str, int]]:
+    """
+    Parses highway camera counts from JSON data.
+
+    Args:
+        json_data (list[dict[str, Any]]): The parsed JSON containing highways and cameras.
+
+    Returns:
+        list[tuple[str, int]]: A sorted list of tuples, each containing the
+            highway name and its total camera count.
+    """
+    highway_data: list[tuple[str, int]] = []
     for highway_item in json_data:
         highway = highway_item["highway"]
-        highway_name = highway["name"]
-        camera_count = len(highway["cameras"])
+        highway_name: str = highway["name"]
+        camera_count: int = len(highway["cameras"])
         highway_data.append((highway_name, camera_count))
 
     highway_data = natsorted(highway_data)
     return highway_data
 
 
-def main(highway_data: list[tuple[str, int, str]]):
+def main(highway_data: list[tuple[str, int]]) -> None:
+    """
+    Prints a formatted list of highways with their respective camera counts.
+
+    Args:
+        highway_data (list[tuple[str, int]]): The list of highway counts.
+    """
     print("\nHighways and camera counts:")
     print(SEPARATOR)
 
@@ -39,6 +56,6 @@ def main(highway_data: list[tuple[str, int, str]]):
 
 if __name__ == "__main__":
     json_file = sys.argv[1]
-    json_data = load_json(Path(json_file))
-    parsed_data = parse_highways(json_data)
+    json_data_input = load_json(Path(json_file))
+    parsed_data = parse_highways(json_data_input)
     main(parsed_data)

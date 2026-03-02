@@ -1,5 +1,7 @@
 import winloop
 from collections import defaultdict
+from typing import Any
+from pathlib import Path
 
 from Downloaders.uk_downloader import UKDownloader
 from tools.utils import load_json
@@ -7,17 +9,36 @@ from Parsers.base_parser import BaseParser
 
 
 class UKParser(BaseParser):
+    """
+    Parser for UK highway cameras (Traffic England).
+    """
+
     @property
     def country(self) -> str:
+        """
+        Property that returns the country code.
+
+        Returns:
+            str: The two-letter country code ('UK').
+        """
         return "UK"
 
-    async def parse(self, raw_data):
-        camera_data = load_json(raw_data)
-        grouped_highways = defaultdict(list)
+    async def parse(self, raw_data: str | bytes) -> list[dict[str, Any]]:
+        """
+        Parses JSON data for UK highway cameras.
+
+        Args:
+            raw_data (str | bytes): The raw JSON string or bytes.
+
+        Returns:
+            list[dict[str, Any]]: A list of formatted highway camera dictionaries.
+        """
+        camera_data: list[dict[str, Any]] = load_json(raw_data)
+        grouped_highways: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for cam in camera_data:
-            cam_desc = cam.get("description", "").split(" ")
-            highway_name = cam_desc[0] if len(cam_desc) > 0 else "Unknown"
-            camera_id = cam_desc[1] if len(cam_desc) > 1 else ""
+            cam_desc: list[str] = cam.get("description", "").split(" ")
+            highway_name: str = cam_desc[0] if len(cam_desc) > 0 else "Unknown"
+            camera_id: str = cam_desc[1] if len(cam_desc) > 1 else ""
 
             cam_formatted = self.format_camera(
                 camera_id=camera_id,
@@ -36,7 +57,19 @@ class UKParser(BaseParser):
 
 
 # Maintaining backward compatibility
-async def get_parsed_data(output_file=None, output_folder=None):
+async def get_parsed_data(
+    output_file: str | Path | None = None, output_folder: str | Path | None = None
+) -> Any:
+    """
+    Downloads and parses camera data for the UK.
+
+    Args:
+        output_file (str | Path | None, optional): Specific file path to save output. Defaults to None.
+        output_folder (str | Path | None, optional): Folder to save output according to country format. Defaults to None.
+
+    Returns:
+        Any: The parsed camera data.
+    """
     parser = UKParser(downloader=UKDownloader())
     return await parser.get_parsed_data(
         output_file=output_file, output_folder=output_folder

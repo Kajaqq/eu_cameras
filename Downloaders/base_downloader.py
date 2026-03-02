@@ -1,5 +1,6 @@
 import socket
 from abc import ABC, abstractmethod
+from typing import Any
 
 import aiohttp
 
@@ -7,22 +8,47 @@ from config import CONSTANTS
 
 
 class HTTPError(Exception):
-    """Custom exception for HTTP errors"""
+    """Custom exception for HTTP errors."""
 
     pass
 
 
 class BaseDownloader(ABC):
+    """
+    Abstract base class for all data downloaders.
+
+    Provides common functionality for creating HTTP sessions with standardized
+    timeout, rate limiting, and error handling configurations.
+    """
+
     def __init__(
         self,
-        timeout_int=CONSTANTS.COMMON.HTTP_TIMEOUT,
-        rate_limit=CONSTANTS.COMMON.RATE_LIMIT,
-    ):
+        timeout_int: float = CONSTANTS.COMMON.HTTP_TIMEOUT,
+        rate_limit: int = CONSTANTS.COMMON.RATE_LIMIT,
+    ) -> None:
+        """
+        Initializes the Downloader.
+
+        Args:
+            timeout_int (float, optional): The HTTP request timeout in seconds.
+                Defaults to CONSTANTS.COMMON.HTTP_TIMEOUT.
+            rate_limit (int, optional): The maximum number of concurrent connections.
+                Defaults to CONSTANTS.COMMON.RATE_LIMIT.
+        """
         self.timeout_int = timeout_int
         self.rate_limit = rate_limit
 
-    def _get_http_settings(self):
-        headers = CONSTANTS.COMMON.DEFAULT_HEADERS.copy()
+    def _get_http_settings(
+        self,
+    ) -> tuple[dict[str, str], aiohttp.ClientTimeout, aiohttp.TCPConnector]:
+        """
+        Generates the standard HTTP settings for a session.
+
+        Returns:
+            tuple[dict[str, str], aiohttp.ClientTimeout, aiohttp.TCPConnector]:
+                A tuple containing the headers dictionary, timeout context, and TCP connector.
+        """
+        headers: dict[str, str] = CONSTANTS.COMMON.DEFAULT_HEADERS.copy()
         timeout = aiohttp.ClientTimeout(total=self.timeout_int)
         resolver = aiohttp.AsyncResolver(nameservers=["8.8.8.8", "1.1.1.1"])
         connector = aiohttp.TCPConnector(
@@ -35,6 +61,17 @@ class BaseDownloader(ABC):
 
     @staticmethod
     def _format_error_message(method: str, url: str, error: Exception) -> str:
+        """
+        Formats a standard error message.
+
+        Args:
+            method (str): The HTTP method used (e.g., 'GET', 'POST').
+            url (str): The URL that failed.
+            error (Exception): The exception caught.
+
+        Returns:
+            str: The formatted error message.
+        """
         method = method.upper()
         return f"{method} request failed for {url}: {error}"
 
@@ -42,6 +79,19 @@ class BaseDownloader(ABC):
     async def _async_request(
         session: aiohttp.ClientSession, method: str, url: str, return_type: str = "text"
     ) -> tuple[bytes, int] | str:
+        """
+        Executes an asynchronous HTTP request.
+
+        Args:
+            session (aiohttp.ClientSession): The active client session.
+            method (str): The HTTP method (e.g., 'GET', 'POST').
+            url (str): The target URL.
+            return_type (str, optional): The expected return type ('text' or 'bytes'). Defaults to 'text'.
+
+        Returns:
+            tuple[bytes, int] | str: The response content. Either a tuple of (bytes, status code)
+                or a string depending on return_type.
+        """
         async with session.request(method, url) as response:
             response.raise_for_status()
             if return_type == "bytes":
@@ -55,41 +105,95 @@ class BaseDownloader(ABC):
         method: str,
         session: aiohttp.ClientSession | None,
     ) -> str:
+        """
+        Fetches the response from a URL using an existing or new session.
+
+        Args:
+            url (str): The target URL.
+            method (str): The HTTP method.
+            session (aiohttp.ClientSession | None): An existing session or None.
+
+        Raises:
+            HTTPError: If the request fails due to an aiohttp.ClientError.
+
+        Returns:
+            str: The raw text response.
+        """
         try:
             if session is None:
                 headers, timeout_ctx, connector = self._get_http_settings()
                 async with aiohttp.ClientSession(
                     headers=headers, timeout=timeout_ctx, connector=connector
                 ) as new_session:
-                    return await self._async_request(new_session, method, url)
+                    content = await self._async_request(new_session, method, url)
+                    return str(content)  # enforce return type as str
             else:
-                return await self._async_request(session, method, url)
+                content = await self._async_request(session, method, url)
+                return str(content)
         except aiohttp.ClientError as e:
             raise HTTPError(self._format_error_message(method, url, e)) from e
 
-    async def get_settings(self):
+    async def get_settings(
+        self,
+    ) -> tuple[dict[str, str], aiohttp.ClientTimeout, aiohttp.TCPConnector]:
+        """
+        Public method to get standard HTTP settings.
+
+        Returns:
+            tuple[dict[str, str], aiohttp.ClientTimeout, aiohttp.TCPConnector]:
+                The headers, timeout context, and TCP connector.
+        """
         return self._get_http_settings()
 
     async def download(
         self, url: str, session: aiohttp.ClientSession | None = None
     ) -> str:
-        """Download content from URL with proper error handling and timeout"""
+        """
+        Downloads content from a URL via a GET request.
+
+        Args:
+            url (str): The target URL.
+            session (aiohttp.ClientSession | None, optional): An active session. Defaults to None.
+
+        Returns:
+            str: The downloaded content as a string.
+        """
         return await self._fetch_response(url, "GET", session)
 
     async def download_post(
         self, url: str, session: aiohttp.ClientSession | None = None
     ) -> str:
-        """Download content via POST with proper error handling and timeout"""
+        """
+        Downloads content from a URL via a POST request.
+
+        Args:
+            url (str): The target URL.
+            session (aiohttp.ClientSession | None, optional): An active session. Defaults to None.
+
+        Returns:
+            str: The downloaded content as a string.
+        """
         return await self._fetch_response(url, "POST", session)
 
     @abstractmethod
-    async def get_data(self):
-        """Abstract method to be implemented by child classes"""
+    async def get_data(self) -> Any:
+        """
+        Abstract method to fetch raw data. Must be implemented by child classes.
+
+        Returns:
+            Any: The raw data.
+        """
         pass
 
 
 class GenericDownloader(BaseDownloader):
-    """A generic downloader that implements BaseDownloader for when just the HTTP features are needed."""
+    """
+    A generic downloader that implements BaseDownloader for when just the HTTP
+    features are needed.
+    """
 
-    async def get_data(self):
+    async def get_data(self) -> None:
+        """
+        No-op implementation of get_data for GenericDownloader.
+        """
         pass

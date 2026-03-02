@@ -6,13 +6,23 @@ from config import CONSTANTS
 from Downloaders.base_downloader import GenericDownloader
 
 
-BASE_URL = CONSTANTS.FRANCE.ASFA.BASE_URL
-AUTH_URL = CONSTANTS.FRANCE.ASFA.AUTH_URL
-HTTPS_PREFIX = CONSTANTS.COMMON.HTTPS_PREFIX
-CAMERA_SUFFIX = CONSTANTS.FRANCE.ASFA.CAMERA_SUFFIX
+BASE_URL: str = CONSTANTS.FRANCE.ASFA.BASE_URL
+AUTH_URL: str = CONSTANTS.FRANCE.ASFA.AUTH_URL
+HTTPS_PREFIX: str = CONSTANTS.COMMON.HTTPS_PREFIX
+CAMERA_SUFFIX: str = CONSTANTS.FRANCE.ASFA.CAMERA_SUFFIX
 
 
-async def get_auth_key(session, url):
+async def get_auth_key(session: aiohttp.ClientSession, url: str) -> str | None:
+    """
+    Fetches the authorization key from the initial ASFA authentication endpoint.
+
+    Args:
+        session (aiohttp.ClientSession): The active client session.
+        url (str): The starting URL.
+
+    Returns:
+        str | None: The extracted authentication key or None if extraction fails.
+    """
     key = None
     async with session.get(url) as r:
         r.raise_for_status()
@@ -28,23 +38,67 @@ async def get_auth_key(session, url):
     return key
 
 
-async def get_phase2(session, key, downloader, url=AUTH_URL):
+async def get_phase2(
+    session: aiohttp.ClientSession,
+    key: str,
+    downloader: GenericDownloader,
+    url: str = AUTH_URL,
+) -> str:
+    """
+    Constructs the Phase 2 URL via the authentication key.
+
+    Args:
+        session (aiohttp.ClientSession): The active client session.
+        key (str): The authentication key.
+        downloader (GenericDownloader): The generic downloader utility.
+        url (str, optional): The phase 1 auth URL format string. Defaults to AUTH_URL.
+
+    Returns:
+        str: The URL for phase 2.
+    """
     url = url.format(key=key)
-    content = await downloader.download(url=url, session=session)
-    phase2 = content.split(";")
-    phase2 = [x for x in phase2 if x.startswith("WT3_SawtLinkToPhase2.src =")]
-    phase2_url = phase2[0].split("'")[1]
+    content: str = await downloader.download(url=url, session=session)
+    phase2_parts = content.split(";")
+    phase2_valid = [
+        x for x in phase2_parts if x.startswith("WT3_SawtLinkToPhase2.src =")
+    ]
+    phase2_url: str = phase2_valid[0].split("'")[1]
     phase2_url = HTTPS_PREFIX + phase2_url
     return phase2_url
 
 
-async def parse_phase2(session, phase2_url, downloader):
-    p2 = await downloader.download(url=phase2_url, session=session)
+async def parse_phase2(
+    session: aiohttp.ClientSession, phase2_url: str, downloader: GenericDownloader
+) -> list[str]:
+    """
+    Downloads and splits the Phase 2 JavaScript.
+
+    Args:
+        session (aiohttp.ClientSession): The active client session.
+        phase2_url (str): The Phase 2 URL.
+        downloader (GenericDownloader): The downloader utility.
+
+    Returns:
+        list[str]: The javascript payload separated by semicolons.
+    """
+    p2: str = await downloader.download(url=phase2_url, session=session)
     return p2.split(";")
 
 
-def resolve_js_variables(lines, target_domain="www.autoroutes.fr"):
-    var_map = {}
+def resolve_js_variables(
+    lines: list[str], target_domain: str = "www.autoroutes.fr"
+) -> dict[str, str]:
+    """
+    Resolves obfuscated variables mimicking a JavaScript execution flow.
+
+    Args:
+        lines (list[str]): The lines of JavaScript to evaluate.
+        target_domain (str, optional): The target domain condition to simulate. Defaults to "www.autoroutes.fr".
+
+    Returns:
+        dict[str, str]: A dictionary of resolved JavaScript variable values.
+    """
+    var_map: dict[str, str] = {}
 
     # regex to match: var NAME = 'VALUE' or "VALUE"
     var_pattern = re.compile(
@@ -83,7 +137,20 @@ def resolve_js_variables(lines, target_domain="www.autoroutes.fr"):
     return var_map
 
 
-def assemble_url(phase2_list, var_values):
+def assemble_url(phase2_list: list[str], var_values: dict[str, str]) -> str:
+    """
+    Assembles the final dataset URL using the resolved components.
+
+    Args:
+        phase2_list (list[str]): The phase 2 javascript instructions.
+        var_values (dict[str, str]): The resolved variables from `resolve_js_variables`.
+
+    Raises:
+        ValueError: If the required variable concatenations cannot be found.
+
+    Returns:
+        str: The fully assembled URL.
+    """
     descriptor_line = next(
         (x for x in phase2_list if "var SAWT3_WebcamDescriptorsLocation =" in x), None
     )
@@ -97,18 +164,26 @@ def assemble_url(phase2_list, var_values):
         final_path = "".join(var_values.get(name, "") for name in var_names)
         full_url = HTTPS_PREFIX + final_path + CAMERA_SUFFIX
     else:
-        raise ValueError("d")
+        raise ValueError("Descriptor location not found in phase2 script.")
     return full_url
 
 
 # noinspection PyShadowingNames
-async def get_complete_url():
+async def get_complete_url() -> str:
+    """
+    Drives the complete multi-phase process to deobfuscate and retrieve the full ASFA data URL.
+
+    Returns:
+        str: Expected data URL.
+    """
     downloader = GenericDownloader()
     headers, timeout, connector = await downloader.get_settings()
     async with aiohttp.ClientSession(
         headers=headers, connector=connector, timeout=timeout
     ) as session:
         auth_key = await get_auth_key(session, BASE_URL)
+        if not auth_key:
+            raise ValueError("Failed to get auth key.")
         phase_2_url = await get_phase2(session, auth_key, downloader)
         phase_2_list = await parse_phase2(session, phase_2_url, downloader)
         resolved_vars = resolve_js_variables(phase_2_list)
