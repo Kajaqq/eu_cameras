@@ -104,7 +104,7 @@ def assemble_url(phase2_list, var_values):
 # noinspection PyShadowingNames
 async def get_complete_url():
     downloader = GenericDownloader()
-    headers, timeout, connector = downloader.get_settings()
+    headers, timeout, connector = await downloader.get_settings()
     async with aiohttp.ClientSession(
         headers=headers, connector=connector, timeout=timeout
     ) as session:

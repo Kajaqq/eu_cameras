@@ -117,7 +117,7 @@ async def main(
     downloader = GenericDownloader(
         timeout_int=CONSTANTS.COMMON.HTTP_TIMEOUT, rate_limit=rate_limit
     )
-    headers, timeout, connector = downloader.get_settings()
+    headers, timeout, connector = await downloader.get_settings()
 
     # Run the checks
     async with aiohttp.ClientSession(
@@ -137,9 +137,10 @@ async def main(
     if download:
         print("Verifying sample images...")
         probably_offline_cams = diff_hash.folder_hash(image_dir)
-        print(f"{len(probably_offline_cams)} cameras are probably offline.")
-        errored_cameras.extend(probably_offline_cams)
-        alive_cameras = list(set(alive_cameras) - set(probably_offline_cams))
+        if probably_offline_cams:
+            print(f"{len(probably_offline_cams)} cameras are probably offline.")
+            errored_cameras.extend(probably_offline_cams)
+            alive_cameras = list(set(alive_cameras) - set(probably_offline_cams))
 
     if errored_cameras:
         print(SEP)

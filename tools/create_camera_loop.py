@@ -82,7 +82,6 @@ def get_ring_cameras_angle(cameras):
 
 
 def get_sort_order(country_code: str = "UK"):
-    # Returns empty lists if country code is not found, preventing crashes
     return COUNTRY_SORT_MAP.get(country_code.upper(), ([], [], []))
 
 
@@ -156,8 +155,6 @@ def process_highway_sequence(cameras, sequence_list, country):
 
         raw_cameras = data_map[real_name]
 
-        # --- NEW SAFE FILTERING ---
-        # Keep if it has valid Coords OR a valid KM Point
         valid_cameras = []
         for c in raw_cameras:
             has_coords = (
@@ -172,7 +169,7 @@ def process_highway_sequence(cameras, sequence_list, country):
 
         filtered_cameras = valid_cameras
 
-        # --- SPECIAL FILTERING FOR ITALY SEGMENTS ---
+        # --- Italy A04 special case ---
         if real_name == "A04":
             temp_filtered = []
             for c in valid_cameras:

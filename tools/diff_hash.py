@@ -1,6 +1,6 @@
 import collections
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import dhash
 import pybktree
 import ffmpeg
@@ -17,7 +17,7 @@ Camera = collections.namedtuple("Camera", "bits id")
 
 def get_video_frame(video_file: Path):
     output_path = video_file.with_suffix(".png")
-    input_file = ffmpeg.input(video_file)
+    input_file = ffmpeg.input(video_file, ss='00:00:00')
     scaled = input_file.scale(w=352, h=288)
     ffmpeg.output(scaled, filename=output_path, vframes=1).run(
         overwrite_output=True, quiet=True
@@ -62,20 +62,21 @@ def get_duplicates(tree, hash_list):
 def main(file_path=None):
     print(f"Hashing images in {file_path}...")
 
-    video_files = [
-        f for f in file_path.iterdir() if f.suffix.lower() in VIDEO_EXTENSIONS
-    ]
+    video_files = []
+    image_files = []
+    for f in file_path.iterdir():
+        ext = f.suffix.lower()
+        if ext in VIDEO_EXTENSIONS:
+            video_files.append(f)
+        elif ext in IMAGE_EXTENSIONS:
+            image_files.append(f)
 
     if video_files:
-        with ProcessPoolExecutor() as executor:
-            list(executor.map(get_video_frame, video_files))
-
-    image_files = [
-        f for f in file_path.iterdir() if f.suffix.lower() in IMAGE_EXTENSIONS
-    ]
-
-    with ProcessPoolExecutor() as executor:
-        results = list(executor.map(get_image_hash, image_files))
+        with ThreadPoolExecutor() as thread_executor:
+            list(thread_executor.map(get_video_frame, video_files))
+    if image_files or video_files:
+        with ProcessPoolExecutor() as process_executor:
+            results = list(process_executor.map(get_image_hash, image_files, chunksize=100))
 
     hash_list = [r for r in results if r is not None]
 
