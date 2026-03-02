@@ -4,7 +4,7 @@ import re
 import winloop
 from collections import defaultdict
 
-from tools.utils import convert_to_wgs84, save_json
+from tools.utils import convert_to_wgs84, save_json_async
 from Downloaders.france_downloader import FranceDownloader
 from tools.merge_france_data import merge_france_data
 from config import CONSTANTS
@@ -20,7 +20,8 @@ class FranceParser(BaseParser):
     def country(self) -> str:
         return "FR"
 
-    def _extract_highway_name(self, text, camera_id=None):
+    @staticmethod
+    def _extract_highway_name(text, camera_id=None):
         if text:
             match = ROAD_REGEX.search(text)
             if match:
@@ -152,19 +153,19 @@ async def get_parsed_data(
     gov_cameras, asfa_cameras, merged_data = await parser.parse(raw_data)
 
     if output_file_gov and gov_cameras:
-        save_json(gov_cameras, output_file_gov)
+        await save_json_async(gov_cameras, output_file_gov)
     if output_file_asfa and asfa_cameras:
-        save_json(asfa_cameras, output_file_asfa)
+        await save_json_async(asfa_cameras, output_file_asfa)
     if output_file_merged:
-        save_json(merged_data, output_file_merged)
+        await save_json_async(merged_data, output_file_merged)
 
     if output_folder:
         output_file_gov_name = "cameras_fr_gov.json"
         output_file_asfa_name = "cameras_fr_asfa.json"
         output_file_merged_name = "cameras_fr_merged.json"
-        save_json(asfa_raw, output_folder / output_file_asfa_name)
-        save_json(gov_raw, output_folder / output_file_gov_name)
-        save_json(merged_data, output_folder / output_file_merged_name)
+        await save_json_async(asfa_raw, output_folder / output_file_asfa_name)
+        await save_json_async(gov_raw, output_folder / output_file_gov_name)
+        await save_json_async(merged_data, output_folder / output_file_merged_name)
 
     return merged_data
 

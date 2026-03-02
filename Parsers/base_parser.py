@@ -65,9 +65,7 @@ class BaseParser(ABC):
         if output_file:
             await save_json_async(parsed_data, output_file)
         elif output_folder:
-            file_name = f"cameras_{self.country.lower()}{'_gov' if self.country in ['ES', 'UK'] else ''}.json"
-            if self.country == "FR":
-                file_name = "cameras_fr_merged.json"  # Special case or default behaviour handled per parser if overriding
+            file_name = f"cameras_{self.country.lower()}{'_gov' if self.country in ['ES', 'UK'] else ''}.json"  # FR handles saving independently
             await save_json_async(parsed_data, Path(output_folder) / file_name)
 
         return parsed_data

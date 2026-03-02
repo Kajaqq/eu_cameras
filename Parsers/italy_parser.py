@@ -135,10 +135,11 @@ class ItalyParser(BaseParser):
                     url=video_url,
                 )
                 cameras.append(camera_entry)
-            return cameras
         except Exception as e:
             print(f"Error parsing A4 ABP data: {e}")
             return []
+        else:
+            return cameras
 
     def parse_a4_cav(self, raw_data):
         if not raw_data:
@@ -171,10 +172,11 @@ class ItalyParser(BaseParser):
                         url=cam_url,
                     )
                     cameras.append(camera_entry)
-            return cameras
         except Exception as e:
             print(f"Error parsing A4 CAV data: {e}")
             return []
+        else:
+            return cameras
 
     def parse_a4_satap(self, raw_data):
         if not raw_data:
@@ -219,10 +221,11 @@ class ItalyParser(BaseParser):
                     url=video_url,
                 )
                 cameras.append(camera_entry)
-            return cameras
         except Exception as e:
             print(f"Error parsing A4 SATAP data: {e}")
             return []
+        else:
+            return cameras
 
     async def parse(self, raw_data):
         parsed_data = self.parse_autostrade_cameras(raw_data["autostrade"])
@@ -243,15 +246,7 @@ class ItalyParser(BaseParser):
             if a4_entry:
                 a4_entry["highway"]["cameras"].extend(a4_cameras)
             else:
-                parsed_data.append(
-                    {
-                        "highway": {
-                            "name": "A04",
-                            "country": self.country,
-                            "cameras": a4_cameras,
-                        }
-                    }
-                )
+                parsed_data.append(self.format_highway_output({"A04": a4_cameras}))
 
         for entry in parsed_data:
             unique_cameras = []

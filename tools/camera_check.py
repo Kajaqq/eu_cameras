@@ -42,7 +42,7 @@ def get_camera_data(json_data: dict):
     return [country, camera_ids]
 
 
-async def check_camera_async(
+async def check_camera(
     client, source, camera_id, camera_type, rate_limiter, download, output_dir=None
 ):
     if source != "IT":
@@ -117,14 +117,14 @@ async def main(
     downloader = GenericDownloader(
         timeout_int=CONSTANTS.COMMON.HTTP_TIMEOUT, rate_limit=rate_limit
     )
-    headers, timeout, connector = downloader._get_http_settings()
+    headers, timeout, connector = downloader.get_settings()
 
     # Run the checks
     async with aiohttp.ClientSession(
         headers=headers, connector=connector, timeout=timeout
     ) as session:
         tasks = [
-            check_camera_async(
+            check_camera(
                 session, source, cam_id, cam_type, rate_limiter, download, IMAGE_DIR
             )
             for cam_id, cam_type in camera_ids

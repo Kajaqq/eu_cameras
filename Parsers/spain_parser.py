@@ -41,11 +41,11 @@ class SpainParser(BaseParser):
 
             print(f"Successfully parsed {len(camaras)} cameras.")
             print(f"Grouped into {len(grouped_highways)} highways")
-            return final_output
-
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             return None
+        else:
+            return final_output
 
 
 async def get_parsed_data(output_file=None, output_folder=None):
