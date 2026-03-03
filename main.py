@@ -19,9 +19,6 @@ DEFAULT_INTERVAL: int = CONSTANTS.COMMON.SLIDESHOW_INTERVAL
 JSON_OUTPUT_DIR: Path = CONSTANTS.COMMON.DATA_DIR
 HTML_OUTPUT_DIR: Path = CONSTANTS.COMMON.HTML_DIR
 
-SPAIN_LOOP: list[tuple[str, int]] = CONSTANTS.SPAIN.HIGHWAY_SEQUENCE
-FRANCE_LOOP: list[tuple[str, int]] = CONSTANTS.FRANCE.HIGHWAY_SEQUENCE
-
 
 def create_html_files(
     input_data: list[dict[str, Any]],
@@ -111,8 +108,9 @@ async def get_camera_data(
 
 async def main() -> None:
     """
-    Main orchestration function to download, parse, test, loop format,
-    and construct HTML slideshows for all configured countries.
+    Main orchestration function to download, parse, and check cameras.
+    Also creates a 10 minute camera loop for each country,
+    and construct HTML slideshows.
     """
     # save_raw saves a raw json file from the API
     # save_checked saves a json file with only online cameras
