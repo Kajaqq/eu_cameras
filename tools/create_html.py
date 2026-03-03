@@ -1,28 +1,43 @@
 import argparse
 import json
 from pathlib import Path
+from typing import Any
+
 from natsort import natsorted
 
 from tools.utils import create_url, load_json, get_country
 from config import CONSTANTS
 
-COUNTRY_MAP = CONSTANTS.COMMON.COUNTRY_MAP
-HTML_DIR = Path(CONSTANTS.COMMON.HTML_DIR)
-DEFAULT_INTERVAL = CONSTANTS.COMMON.SLIDESHOW_INTERVAL
+COUNTRY_MAP: dict[str, str] = CONSTANTS.COMMON.COUNTRY_MAP
+HTML_DIR: Path = Path(CONSTANTS.COMMON.HTML_DIR)
+DEFAULT_INTERVAL: int = CONSTANTS.COMMON.SLIDESHOW_INTERVAL
 
 
 def get_camera_urls(
-    json_data: list[dict],
+    json_data: list[dict[str, Any]],
     camera_ids: list[str] | None = None,
     highways: list[str] | None = None,
     apply_sort: bool = False,
 ) -> tuple[list[tuple[str, str, str, int, str]], str]:
+    """
+    Extracts camera URLs and metadata from JSON data for slideshow generation.
 
+    Args:
+        json_data (list[dict[str, Any]]): The parsed camera data.
+        camera_ids (list[str] | None, optional): Specific camera IDs to include. Defaults to None.
+        highways (list[str] | None, optional): Specific highways to filter by. Defaults to None.
+        apply_sort (bool, optional): Whether to sort the cameras naturally by highway name. Defaults to False.
+
+    Returns:
+        tuple[list[tuple[str, str, str, int, str]], str]: A tuple containing:
+            - A list of camera tuples (ID, URL, highway name, sequence number, media type).
+            - The country code.
+    """
     country = get_country(json_data)
-    cameras = []
+    cameras: list[tuple[str, str, str, int, str]] = []
 
     if camera_ids:
-        camera_map = {}
+        camera_map: dict[str, tuple[dict[str, Any], str]] = {}
         for highway_item in json_data:
             hw_name = highway_item["highway"]["name"]
             for cam in highway_item["highway"]["cameras"]:
@@ -80,7 +95,7 @@ def get_camera_urls(
     return cameras, country
 
 
-# language=html
+
 def generate_html(
     cameras: list[tuple[str, str, str, int, str]], interval: int, country: str
 ) -> str:
@@ -101,6 +116,7 @@ def generate_html(
         for cid, url, hw, num, media_type in cameras
     ]
 
+    # language=html
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -505,7 +521,13 @@ def generate_html(
     return html
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
+    """
+    Parses CLI arguments required for HTML generation.
+
+    Returns:
+        argparse.Namespace: the argument namespace array.
+    """
     parser = argparse.ArgumentParser(
         description="Generate an HTML slideshow from camera JSON data for OBS"
     )
@@ -566,7 +588,13 @@ def parse_args():
     return arguments
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
+    """
+    Main execution logic for reading inputs, validating inputs, and dumping the generated HTML content.
+
+    Args:
+        args (argparse.Namespace): The CLI arguments.
+    """
     # Load JSON data
     try:
         json_data = load_json(args.json_file)

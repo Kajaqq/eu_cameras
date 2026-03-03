@@ -1,28 +1,32 @@
 import math
 from pathlib import Path
+from typing import Any
+from collections.abc import Callable
+
 from tools.utils import load_json, get_country
 from config import CONSTANTS
 
 # ==========================================
 # MASTER HIGHWAY SORTING LISTS
 # ==========================================
-UK_NORTH_SOUTH = CONSTANTS.UK.HighwaySort.NORTH_SOUTH
-UK_EAST_WEST = CONSTANTS.UK.HighwaySort.EAST_WEST
-UK_RINGS = CONSTANTS.UK.HighwaySort.RINGS
+UK_NORTH_SOUTH: list[str] = CONSTANTS.UK.HighwaySort.NORTH_SOUTH
+UK_EAST_WEST: list[str] = CONSTANTS.UK.HighwaySort.EAST_WEST
+UK_RINGS: list[str] = CONSTANTS.UK.HighwaySort.RINGS
 
-ES_NORTH_SOUTH = CONSTANTS.SPAIN.HighwaySort.NORTH_SOUTH
-ES_EAST_WEST = CONSTANTS.SPAIN.HighwaySort.EAST_WEST
-ES_RINGS = CONSTANTS.SPAIN.HighwaySort.RINGS
+ES_NORTH_SOUTH: list[str] = CONSTANTS.SPAIN.HighwaySort.NORTH_SOUTH
+ES_EAST_WEST: list[str] = CONSTANTS.SPAIN.HighwaySort.EAST_WEST
+ES_RINGS: list[str] = CONSTANTS.SPAIN.HighwaySort.RINGS
 
-FR_NORTH_SOUTH = CONSTANTS.FRANCE.HighwaySort.NORTH_SOUTH
-FR_EAST_WEST = CONSTANTS.FRANCE.HighwaySort.EAST_WEST
-FR_RINGS = CONSTANTS.FRANCE.HighwaySort.RINGS
+FR_NORTH_SOUTH: list[str] = CONSTANTS.FRANCE.HighwaySort.NORTH_SOUTH
+FR_EAST_WEST: list[str] = CONSTANTS.FRANCE.HighwaySort.EAST_WEST
+FR_RINGS: list[str] = CONSTANTS.FRANCE.HighwaySort.RINGS
 
-IT_NORTH_SOUTH = CONSTANTS.ITALY.HighwaySort.NORTH_SOUTH
-IT_EAST_WEST = CONSTANTS.ITALY.HighwaySort.EAST_WEST
-IT_RINGS = CONSTANTS.ITALY.HighwaySort.RINGS
+IT_NORTH_SOUTH: list[str] = CONSTANTS.ITALY.HighwaySort.NORTH_SOUTH
+IT_EAST_WEST: list[str] = CONSTANTS.ITALY.HighwaySort.EAST_WEST
+IT_RINGS: list[str] = CONSTANTS.ITALY.HighwaySort.RINGS
 
-COUNTRY_SORT_MAP = {
+# Map camera regions to countries
+COUNTRY_SORT_MAP: dict[str, tuple[list[str], list[str], list[str]]] = {
     "UK": (UK_NORTH_SOUTH, UK_EAST_WEST, UK_RINGS),
     "ES": (ES_NORTH_SOUTH, ES_EAST_WEST, ES_RINGS),
     "FR": (FR_NORTH_SOUTH, FR_EAST_WEST, FR_RINGS),
@@ -32,13 +36,13 @@ COUNTRY_SORT_MAP = {
 # ==========================================
 # LOOP CONSTANTS
 # ==========================================
-SEP = CONSTANTS.COMMON.SEPARATOR
-DEFAULT_INTERVAL = CONSTANTS.COMMON.SLIDESHOW_INTERVAL
-COUNTRY_MAP = CONSTANTS.COMMON.COUNTRY_MAP
-DATA_DIR = CONSTANTS.COMMON.DATA_DIR
+SEP: str = CONSTANTS.COMMON.SEPARATOR
+DEFAULT_INTERVAL: int = CONSTANTS.COMMON.SLIDESHOW_INTERVAL
+COUNTRY_MAP: dict[str, str] = CONSTANTS.COMMON.COUNTRY_MAP
+DATA_DIR: Path = CONSTANTS.COMMON.DATA_DIR
 
 # A ~10 minute(~90 cameras) loop of the most important highways of the country
-HIGHWAY_SEQUENCES = {
+HIGHWAY_SEQUENCES: dict[str, list[tuple[str, int]]] = {
     "Spain": CONSTANTS.SPAIN.HIGHWAY_SEQUENCE,
     "France": CONSTANTS.FRANCE.HIGHWAY_SEQUENCE,
     "Italy": CONSTANTS.ITALY.HIGHWAY_SEQUENCE,
@@ -46,9 +50,18 @@ HIGHWAY_SEQUENCES = {
 }
 
 
-def get_ring_cameras_angle(cameras):
-    """Sorts clockwise around geographic center safely"""
+def get_ring_cameras_angle(
+    cameras: list[dict[str, Any]],
+) -> Callable[[dict[str, Any]], float]:
+    """
+    Creates a sorting key function to sort cameras clockwise around their geographic center safely.
 
+    Args:
+        cameras (list[dict[str, Any]]): A list of camera dictionaries on the ring highway.
+
+    Returns:
+        Callable[[dict[str, Any]], float]: A function mapping a camera to its clockwise angle or km point.
+    """
     # Find the center using cameras that have coordinates
     valid_coords = [
         c
@@ -65,7 +78,8 @@ def get_ring_cameras_angle(cameras):
     center_x = sum(cam["coords"]["X"] for cam in valid_coords) / len(valid_coords)
     center_y = sum(cam["coords"]["Y"] for cam in valid_coords) / len(valid_coords)
 
-    def get_clockwise_angle(cam):
+    def get_clockwise_angle(cam: dict[str, Any]) -> float:
+        """Helper to get clockwise angle."""
         if (
             not cam.get("coords")
             or cam["coords"].get("X") is None
@@ -81,25 +95,47 @@ def get_ring_cameras_angle(cameras):
     return get_clockwise_angle
 
 
-def get_sort_order(country_code: str = "UK"):
-    # Returns empty lists if country code is not found, preventing crashes
+def get_sort_order(country_code: str = "UK") -> tuple[list[str], list[str], list[str]]:
+    """
+    Fetches the highway classification collections for a country.
+
+    Args:
+        country_code (str, optional): The country code (e.g., 'UK', 'ES'). Defaults to 'UK'.
+
+    Returns:
+        tuple[list[str], list[str], list[str]]: A tuple of lists representing (North-South, East-West, Rings).
+    """
     return COUNTRY_SORT_MAP.get(country_code.upper(), ([], [], []))
 
 
-def sort_cameras(cameras, highway: str, country):
+def sort_cameras(
+    cameras: list[dict[str, Any]], highway: str, country: str
+) -> list[dict[str, Any]]:
+    """
+    Sorts a list of cameras based on their highway directionality (NS, EW, or Ring).
+
+    Args:
+        cameras (list[dict[str, Any]]): The list of cameras.
+        highway (str): The name of the highway.
+        country (str): The country code.
+
+    Returns:
+        list[dict[str, Any]]: The sorted list of cameras.
+    """
     if not cameras:
         return []
 
     ns, ew, rings = get_sort_order(country)
 
-    # safely extract X/Y and KM values
-    def safe_y(cam):
+    def safe_y(cam: dict[str, Any]) -> float:
+        """Safely extract Y or fallback to km."""
         if cam.get("coords") and cam["coords"].get("Y") is not None:
             return float(cam["coords"]["Y"])
         km = cam.get("camera_km_point")
         return float(km) if km is not None else float("inf")
 
-    def safe_x(cam):
+    def safe_x(cam: dict[str, Any]) -> float:
+        """Safely extract X or fallback to km."""
         if cam.get("coords") and cam["coords"].get("X") is not None:
             return float(cam["coords"]["X"])
         km = cam.get("camera_km_point")
@@ -125,7 +161,20 @@ def sort_cameras(cameras, highway: str, country):
         return cameras
 
 
-def sample_cameras(cameras, target_count, highway_name):
+def sample_cameras(
+    cameras: list[dict[str, Any]], target_count: int, highway_name: str
+) -> list[dict[str, Any]]:
+    """
+    Evenly samples a target number of cameras from the provided list.
+
+    Args:
+        cameras (list[dict[str, Any]]): The list of available cameras.
+        target_count (int): The number of cameras to select.
+        highway_name (str): The name of the highway (used for logging).
+
+    Returns:
+        list[dict[str, Any]]: The sampled cameras.
+    """
     if not cameras or target_count <= 0:
         return []
     cameras_len = len(cameras)
@@ -142,10 +191,24 @@ def sample_cameras(cameras, target_count, highway_name):
     return [cameras[int(i * step)] for i in range(target_count)]
 
 
-def process_highway_sequence(cameras, sequence_list, country):
+def process_highway_sequence(
+    cameras: list[dict[str, Any]], sequence_list: list[tuple[str, int]], country: str
+) -> list[dict[str, Any]]:
+    """
+    Processes the specified sequence of highways to collect and sort cameras.
+
+    Args:
+        cameras (list[dict[str, Any]]): The full parsed dataset grouping highways.
+        sequence_list (list[tuple[str, int]]): A list specifying the sequence of highways and the number of
+            cameras to sample from each.
+        country (str): The country code.
+
+    Returns:
+        list[dict[str, Any]]: A compiled playlist containing the appropriately sampled cameras.
+    """
     data_map = {item["highway"]["name"]: item["highway"]["cameras"] for item in cameras}
 
-    final_playlist = []
+    final_playlist: list[dict[str, Any]] = []
 
     for highway_name, count in sequence_list:
         real_name = highway_name.split("_")[0]
@@ -156,12 +219,10 @@ def process_highway_sequence(cameras, sequence_list, country):
 
         raw_cameras = data_map[real_name]
 
-        # --- NEW SAFE FILTERING ---
-        # Keep if it has valid Coords OR a valid KM Point
-        valid_cameras = []
+        valid_cameras: list[dict[str, Any]] = []
         for c in raw_cameras:
             has_coords = (
-                c.get("coords")
+                bool(c.get("coords"))
                 and c["coords"].get("X") is not None
                 and c["coords"].get("Y") is not None
             )
@@ -172,9 +233,9 @@ def process_highway_sequence(cameras, sequence_list, country):
 
         filtered_cameras = valid_cameras
 
-        # --- SPECIAL FILTERING FOR ITALY SEGMENTS ---
+        # --- Italy A04 special case ---
         if real_name == "A04":
-            temp_filtered = []
+            temp_filtered: list[dict[str, Any]] = []
             for c in valid_cameras:
                 # Safely extract X and KM values
                 x = (
@@ -217,21 +278,34 @@ def process_highway_sequence(cameras, sequence_list, country):
     return final_playlist
 
 
-def main(data, loop_data=None):
-    data = load_json(data)
-    country = get_country(data)
+def main(
+    data: str | Path | list[dict[str, Any]],
+    loop_data: list[tuple[str, int]] | None = None,
+) -> list[str]:
+    """
+    Constructs a looped list of cameras based on configured priorities.
+
+    Args:
+        data (str | Path | list[dict[str, Any]]): The input camera data file or parsed data.
+        loop_data (list[tuple[str, int]] | None, optional): An explicit loop configuration or None to use defaults.
+
+    Returns:
+        list[str]: A list of selected camera IDs representing the slideshow cycle.
+    """
+    parsed_data = load_json(data)
+    country = get_country(parsed_data)
     country_name = COUNTRY_MAP[country]
     print(SEP)
     print(f"Creating loop for {country_name}")
     print(SEP)
     if not loop_data:
         loop_data = HIGHWAY_SEQUENCES[country_name]
-    selected_cameras = process_highway_sequence(data, loop_data, country)
-    camera_ids = []
+    selected_cameras = process_highway_sequence(parsed_data, loop_data, country)
+    camera_ids: list[str] = []
     print(SEP)
     print(f"Successfully compiled loop with {len(selected_cameras)} total cameras")
     print(SEP)
-    camera_ids.extend(cam["camera_id"] for cam in selected_cameras)
+    camera_ids.extend(str(cam["camera_id"]) for cam in selected_cameras)
     return camera_ids
 
 

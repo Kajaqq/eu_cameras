@@ -1,47 +1,78 @@
 import winloop
 from collections import defaultdict
+from typing import Any
+from pathlib import Path
 
-from Downloaders.uk_downloader import get_uk_data
-from tools.utils import save_json, load_json
-
-
-async def parse_camera_data(raw_data=None):
-    if not raw_data:
-        raw_data = await get_uk_data()
-    camera_data = load_json(raw_data)
-    grouped_highways = defaultdict(list)
-    for cam in camera_data:
-        cam_desc = cam.get("description").split(" ")
-        highway_name = cam_desc[0]
-        camera_id = cam_desc[1]
-        grouped_highways[highway_name].append(
-            {
-                "camera_id": camera_id,
-                "camera_km_point": 0.0,
-                "camera_view": "*",
-                "camera_type": "img",
-                "coords": {"X": cam.get("longitude"), "Y": cam.get("latitude")},
-            }
-        )
-
-    final_output = [
-        {"highway": {"name": name, "country": "UK", "cameras": cameras}}
-        for name, cameras in grouped_highways.items()
-    ]
-
-    print(f"Successfully parsed {len(camera_data)} cameras.")
-    print(f"Data grouped by {len(final_output)} highways.")
-    return final_output
+from Downloaders.uk_downloader import UKDownloader
+from tools.utils import load_json
+from Parsers.base_parser import BaseParser
 
 
-async def get_parsed_data(output_file=None, output_folder=None):
-    camera_data = await get_uk_data()
-    uk_data = await parse_camera_data(camera_data)
-    if output_file:
-        save_json(uk_data, output_file)
-    elif output_folder:
-        save_json(uk_data, output_folder / "cameras_uk_gov.json")
-    return uk_data
+class UKParser(BaseParser):
+    """
+    Parser for UK highway cameras (Traffic England).
+    """
+
+    @property
+    def country(self) -> str:
+        """
+        Property that returns the country code.
+
+        Returns:
+            str: The two-letter country code ('UK').
+        """
+        return "UK"
+
+    async def parse(self, raw_data: str | bytes) -> list[dict[str, Any]]:
+        """
+        Parses JSON data for UK highway cameras.
+
+        Args:
+            raw_data (str | bytes): The raw JSON string or bytes.
+
+        Returns:
+            list[dict[str, Any]]: A list of formatted highway camera dictionaries.
+        """
+        camera_data: list[dict[str, Any]] = load_json(raw_data)
+        grouped_highways: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for cam in camera_data:
+            cam_desc: list[str] = cam.get("description", "").split(" ")
+            highway_name: str = cam_desc[0] if len(cam_desc) > 0 else "Unknown"
+            camera_id: str = cam_desc[1] if len(cam_desc) > 1 else ""
+            # UK data unfortunately doesn't have km_point or camera_view as they operate on a different standard
+            cam_formatted = self.format_camera(
+                camera_id=camera_id,
+                camera_km_point=0.0,
+                camera_view="*",
+                camera_type="img",
+                coord_x=cam.get("longitude"),
+                coord_y=cam.get("latitude"),
+            )
+            grouped_highways[highway_name].append(cam_formatted)
+
+        final_output = self.format_highway_output(grouped_highways)
+        print(f"Successfully parsed {len(camera_data)} cameras.")
+        print(f"Grouped into {len(grouped_highways)} highways")
+        return final_output
+
+
+async def get_parsed_data(
+    output_file: str | Path | None = None, output_folder: str | Path | None = None
+) -> Any:
+    """
+    Wrapper function for UKParser.get_parsed_data.
+
+    Args:
+        output_file (str | Path | None, optional): Specific file path to save output. Defaults to None.
+        output_folder (str | Path | None, optional): Folder to save output according to country format. Defaults to None.
+
+    Returns:
+        Any: The parsed camera data.
+    """
+    parser = UKParser(downloader=UKDownloader())
+    return await parser.get_parsed_data(
+        output_file=output_file, output_folder=output_folder
+    )
 
 
 if __name__ == "__main__":

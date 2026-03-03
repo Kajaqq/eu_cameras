@@ -1,10 +1,29 @@
-from tools.utils import download
+import winloop
+
 from config import CONSTANTS
+from Downloaders.base_downloader import BaseDownloader
 
-CAMERA_BASE_URL = CONSTANTS.UK.CAMERA_URL
-CAMERA_API = CONSTANTS.UK.CAMERA_API_URL
+CAMERA_BASE_URL: str = CONSTANTS.UK.CAMERA_URL
+CAMERA_API: str = CONSTANTS.UK.CAMERA_API_URL
 
 
-async def get_uk_data():
-    download_link = CAMERA_API
-    return await download(download_link)
+class UKDownloader(BaseDownloader):
+    """
+    Downloader for UK highway camera data.
+    Only England (Traffic England) is supported at the moment.
+    """
+
+    async def get_data(self) -> str:
+        """
+        Downloads raw camera data for the UK.
+
+        Returns:
+            str: The raw JSON string from the Traffic England API.
+        """
+        download_link: str = CAMERA_API
+        return await self.download(download_link)
+
+
+if __name__ == "__main__":
+    downloader = UKDownloader()
+    winloop.run(downloader.get_data())

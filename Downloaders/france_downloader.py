@@ -2,99 +2,120 @@ import asyncio
 import winloop
 import json
 import aiohttp
-import aiofiles
 
-from pathlib import Path
 from tools.france_asfa_deobfuscate import get_complete_url as get_asfa_url
 from config import CONSTANTS
-from tools.utils import (
-    download,
-    unix_to_datetime,
-    get_http_settings,
-    save_json_async,
-)
+from tools.utils import unix_to_datetime
+from Downloaders.base_downloader import BaseDownloader
 
 
-async def save_asfa_file(asfa_data, output_file):
-    output_file = Path(output_file)
-    output_path = output_file.parent
-    if not output_path.exists():
-        output_path.mkdir(parents=True, exist_ok=True)
-    async with aiofiles.open(output_file, "w", encoding="utf-8") as f:
-        await f.write(asfa_data)
+class FranceDownloader(BaseDownloader):
+    """
+    Downloader for French highway camera data.
+    Handles ASFA and Government (Bison Futé) sources separately.
+    """
 
+    async def get_gov_url(self, session: aiohttp.ClientSession) -> str | None:
+        """
+        Retrieves the government data URL by merging the timestamp with the data URL.
 
-async def get_gov_url(session):
-    base_url = CONSTANTS.FRANCE.BASE_URL
-    timestamp_url = f"{base_url}{CONSTANTS.FRANCE.TIMESTAMP_URL}"
-    camera_url = f"{base_url}{CONSTANTS.FRANCE.CAMERA_API}"
+        Args:
+            session (aiohttp.ClientSession): The active client session.
 
-    try:
-        timestamp_raw = await download(url=timestamp_url, session=session)
-        timestamp = json.loads(timestamp_raw)[0]
+        Returns:
+            str | None: The formatted URL for the government camera data, or None if failed.
+        """
+        base_url: str = CONSTANTS.FRANCE.BASE_URL
+        timestamp_url = f"{base_url}{CONSTANTS.FRANCE.TIMESTAMP_URL}"
+        camera_url = f"{base_url}{CONSTANTS.FRANCE.CAMERA_API}"
 
-        # Ensure we have an integer before formatting
-        if isinstance(timestamp, str):
-            timestamp = int(timestamp)
+        try:
+            timestamp_raw: str = await self.download(url=timestamp_url, session=session)
+            timestamp: int = json.loads(timestamp_raw)[0]
 
-        timestamp_formatted = unix_to_datetime(timestamp)
-        return camera_url.format(datetime=timestamp_formatted)
-    except (ValueError, IndexError, Exception) as e:
-        print(f"Error fetching/parsing timestamp: {e}")
-        return None
+            if isinstance(timestamp, str):
+                timestamp = int(timestamp)
 
+            timestamp_formatted: str = unix_to_datetime(timestamp)
+            return camera_url.format(datetime=timestamp_formatted)
+        except (ValueError, IndexError, Exception) as e:
+            print(f"Error fetching/parsing timestamp: {e}")
+            return None
 
-async def download_asfa(session):
-    asfa_camera_url = await get_asfa_url()
-    return await download(url=asfa_camera_url, session=session)
+    async def download_asfa(self, session: aiohttp.ClientSession) -> str:
+        """
+        Downloads the ASFA camera data.
 
+        Args:
+            session (aiohttp.ClientSession): The active client session.
 
-async def download_gov(session):
-    gov_camera_url = await get_gov_url(session=session)
-    if not gov_camera_url:
-        return None
-    return await download(url=gov_camera_url, session=session)
+        Returns:
+            str: The raw ASFA data.
+        """
+        asfa_camera_url: str = await get_asfa_url()
+        return await self.download(url=asfa_camera_url, session=session)
 
+    async def download_gov(self, session: aiohttp.ClientSession) -> str | None:
+        """
+        Downloads the Government GeoJSON camera data.
 
-async def get_france_data(
-    asfa_only=False, gov_only=False, output_file_gov=None, output_file_asfa=None
-):
-    headers, timeout, connector = get_http_settings()
-    asfa_camera_data = None
-    gov_camera_data = None
-    async with aiohttp.ClientSession(
-        headers=headers, connector=connector, timeout=timeout
-    ) as session:
-        # Determine what needs to be downloaded
-        fetch_asfa = asfa_only or (not gov_only)
-        fetch_gov = gov_only or (not asfa_only)
+        Args:
+            session (aiohttp.ClientSession): The active client session.
 
-        # Create tasks for downloads
-        asfa_task = (
-            download_asfa(session) if fetch_asfa else asyncio.sleep(0, result=None)
-        )
-        gov_task = download_gov(session) if fetch_gov else asyncio.sleep(0, result=None)
+        Returns:
+            str | None: The raw Government data or None if URL retrieval fails.
+        """
+        gov_camera_url: str | None = await self.get_gov_url(session=session)
+        if not gov_camera_url:
+            return None
+        return await self.download(url=gov_camera_url, session=session)
 
-        # Execute downloads concurrently
-        asfa_camera_data, gov_camera_data = await asyncio.gather(asfa_task, gov_task)
+    async def get_data(
+        self, asfa_only: bool = False, gov_only: bool = False
+    ) -> tuple[str | None, str | None]:
+        """
+        Orchestrates downloading data from ASFA, Government, or both sources.
 
-    # Save results if paths provided
-    save_tasks = []
-    if asfa_camera_data and output_file_asfa:
-        save_tasks.append(save_asfa_file(asfa_camera_data, output_file_asfa))
-    if gov_camera_data and output_file_gov:
-        save_tasks.append(save_json_async(gov_camera_data, output_file_gov))
+        Args:
+            asfa_only (bool, optional): If True, downloading is restricted to ASFA only.
+                Defaults to False.
+            gov_only (bool, optional): If True, downloading is restricted to Gov only.
+                Defaults to False.
 
-    if save_tasks:
-        await asyncio.gather(*save_tasks)
+        Returns:
+            tuple[str | None, str | None]: A tuple containing the raw ASFA string
+                and raw Government string respectively. Values will be None if not fetched.
+        """
+        headers, timeout, connector = self._get_http_settings()
+        asfa_camera_data: str | None = None
+        gov_camera_data: str | None = None
 
-    return asfa_camera_data, gov_camera_data
+        async with aiohttp.ClientSession(
+            headers=headers, connector=connector, timeout=timeout
+        ) as session:
+            fetch_asfa: bool = asfa_only or (not gov_only)
+            fetch_gov: bool = gov_only or (not asfa_only)
+
+            asfa_task = (
+                self.download_asfa(session)
+                if fetch_asfa
+                else asyncio.sleep(0, result=None)
+            )
+            gov_task = (
+                self.download_gov(session)
+                if fetch_gov
+                else asyncio.sleep(0, result=None)
+            )
+
+            asfa_camera_data, gov_camera_data = await asyncio.gather(
+                asfa_task, gov_task
+            )
+
+        return asfa_camera_data, gov_camera_data
 
 
 if __name__ == "__main__":
-    # Use paths relative to project root or absolute paths
-    data_dir = Path(__file__).parent.parent / "data"
-    out_asfa = data_dir / "cameras_fr_asfa.js"
-    out_gov = data_dir / "cameras_fr_gov.json"
-
-    winloop.run(get_france_data(output_file_gov=out_gov, output_file_asfa=out_asfa))
+    asfa_only = False
+    gov_only = False
+    downloader = FranceDownloader()
+    winloop.run(downloader.get_data(asfa_only, gov_only))
