@@ -21,7 +21,7 @@ class FranceParser(BaseParser):
     Parser for French highway cameras.
 
     Handles data from two sources:
-    1. Government GeoJSON data (Bison Futé).
+    1. Deobfuscated government GeoJSON data (Bison Futé).
     2. ASFA (Association des Sociétés Françaises d'Autoroutes) Javascript array data.
     """
 
@@ -49,21 +49,26 @@ class FranceParser(BaseParser):
         Returns:
             str: The normalized highway name (e.g., 'A-10', 'N-154') or 'Unknown'.
         """
+        def _normalize_rn(prefix_:str):
+            # France national highways 'Route Nationale' use RN or N interchangeably. We normalize it to more common 'N'
+            return "N" if prefix == "RN" else prefix
+
         if text:
+            # Try to get the first apperance of a highway name pattern
             match = ROAD_REGEX.search(text)
             if match:
                 prefix = match.group(1).upper()
-                if prefix == "RN":
-                    prefix = "N"
+                prefix = _normalize_rn(prefix)
                 return f"{prefix}-{match.group(2)}"
 
+        # This is needed as France metadata sometimes doesn't include the specific name
+        # The list has been manually checked based on coordinates
         if camera_id and camera_id in UNKNOWN_MAPPING:
             mapped_name = UNKNOWN_MAPPING[camera_id]
             match = ROAD_REGEX.search(mapped_name)
             if match:
                 prefix = match.group(1).upper()
-                if prefix == "RN":
-                    prefix = "N"
+                prefix =  _normalize_rn(prefix)
                 return f"{prefix}-{match.group(2)}"
             return mapped_name
 
@@ -79,6 +84,16 @@ class FranceParser(BaseParser):
         Returns:
             list[dict[str, Any]]: A list of formatted highway camera dictionaries.
         """
+        def _km_point_get(full_label_) -> float:
+            km_pt = 0.0
+            pr_match = PR_REGEX.search(full_label_)
+            if pr_match:
+                km = int(pr_match.group(1))
+                meters_str = pr_match.group(2)
+                meters = int(meters_str) if meters_str else 0
+                km_pt = km + (meters / 1000.0)
+            return km_pt
+
         try:
             raw_data = json.loads(gov_baguettes)
         except (json.JSONDecodeError, Exception) as e:
@@ -88,21 +103,14 @@ class FranceParser(BaseParser):
         grouped_highways: dict[str, list[dict[str, Any]]] = defaultdict(list)
         features: list[dict[str, Any]] = raw_data.get("features") or []
         camera_sum = 0
+
         for feature in features:
+            camera_sum += 1
             props: dict[str, Any] = feature.get("properties") or {}
             geometry: dict[str, Any] = feature.get("geometry") or {}
             full_label: str = props.get("libelleCamera") or ""
             camera_id: str = feature.get("id", "")
-            camera_sum += 1
-
-            km_point = 0.0
-            pr_match = PR_REGEX.search(full_label)
-            if pr_match:
-                km = int(pr_match.group(1))
-                meters_str = pr_match.group(2)
-                meters = int(meters_str) if meters_str else 0
-                km_point = km + (meters / 1000.0)
-
+            km_point = _km_point_get(full_label)
             flux_type: str = props.get("typeFlux") or ""
             cam_type = (
                 "vid"
@@ -130,7 +138,7 @@ class FranceParser(BaseParser):
             )
             grouped_highways[highway_name].append(camera_entry)
 
-        print(f"Succesfully parsed {camera_sum} gov cameras")
+        print(f"Succesfully parsed {camera_sum} Government cameras")
         return self.format_highway_output(grouped_highways)
 
     def parse_asfa_cameras(self, asfa_baguettes: str) -> list[dict[str, Any]]:
@@ -161,6 +169,7 @@ class FranceParser(BaseParser):
 
             highway_name = self._extract_highway_name(description, camera_id)
 
+            # ASFA doesn't return km_point or camera direction
             camera_entry = self.format_camera(
                 camera_id=camera_id,
                 camera_km_point=0.0,
@@ -172,7 +181,7 @@ class FranceParser(BaseParser):
 
             grouped_highways[highway_name].append(camera_entry)
 
-        print(f"Succesfully parsed {camera_sum} asfa_cameras")
+        print(f"Succesfully parsed {camera_sum} ASFA cameras")
         return self.format_highway_output(grouped_highways)
 
     async def parse(
@@ -202,7 +211,6 @@ class FranceParser(BaseParser):
         return gov_cameras, asfa_cameras, merged_data
 
 
-# Maintaining special orchestration for France due to intermediate JSON saving
 async def get_parsed_data(
     output_file_gov: str | Path | None = None,
     output_file_asfa: str | Path | None = None,
@@ -231,14 +239,17 @@ async def get_parsed_data(
 
     gov_cameras, asfa_cameras, merged_data = await parser.parse(raw_data)
 
+    if output_file_merged:
+        await save_json_async(merged_data, output_file_merged)
+
+    # Allow saving camera sources separately
     if output_file_gov and gov_cameras:
         await save_json_async(gov_cameras, output_file_gov)
     if output_file_asfa and asfa_cameras:
         await save_json_async(asfa_cameras, output_file_asfa)
-    if output_file_merged:
-        await save_json_async(merged_data, output_file_merged)
 
     if output_folder:
+        # If output folder is specified, save all files
         folder_path = Path(output_folder)
         output_file_gov_name = "cameras_fr_gov.json"
         output_file_asfa_name = "cameras_fr_asfa.json"

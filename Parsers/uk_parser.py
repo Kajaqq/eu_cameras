@@ -39,7 +39,7 @@ class UKParser(BaseParser):
             cam_desc: list[str] = cam.get("description", "").split(" ")
             highway_name: str = cam_desc[0] if len(cam_desc) > 0 else "Unknown"
             camera_id: str = cam_desc[1] if len(cam_desc) > 1 else ""
-
+            # UK data unfortunately doesn't have km_point or camera_view as they operate on a different standard
             cam_formatted = self.format_camera(
                 camera_id=camera_id,
                 camera_km_point=0.0,
@@ -56,12 +56,11 @@ class UKParser(BaseParser):
         return final_output
 
 
-# Maintaining backward compatibility
 async def get_parsed_data(
     output_file: str | Path | None = None, output_folder: str | Path | None = None
 ) -> Any:
     """
-    Downloads and parses camera data for the UK.
+    Wrapper function for UKParser.get_parsed_data.
 
     Args:
         output_file (str | Path | None, optional): Specific file path to save output. Defaults to None.

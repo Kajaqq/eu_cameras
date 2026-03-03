@@ -32,7 +32,7 @@ class ItalyParser(BaseParser):
 
     def parse_autostrade_cameras(self, raw_data: str | bytes) -> list[dict[str, Any]]:
         """
-        Parses JSON data for Autostrade cameras.
+        Parses JSON data for Autostrade cameras. (Most of the country cameras are here)
 
         Args:
             raw_data (str | bytes): The raw JSON string or bytes containing Autostrade data.
@@ -87,7 +87,7 @@ class ItalyParser(BaseParser):
 
     def parse_a22_cameras(self, raw_data: str | bytes) -> list[dict[str, Any]]:
         """
-        Parses JSON data for A22 highway cameras.
+        Parses JSON data for A22 highway cameras. (Brenner Pass)
 
         Args:
             raw_data (str | bytes): The raw JSON string or bytes for A22 data.
@@ -144,7 +144,7 @@ class ItalyParser(BaseParser):
         Returns:
             list[dict[str, Any]]: A list of formatted camera dictionaries for this section.
         """
-        BASE_URL: str = CONSTANTS.ITALY.A4.ABP.BASE_ABP_URL
+        base_url: str = CONSTANTS.ITALY.A4.ABP.BASE_ABP_URL
         if not raw_data:
             return []
         try:
@@ -162,7 +162,7 @@ class ItalyParser(BaseParser):
                 else:
                     km_point = 0.0
                 video_url: str = cam.get("url", "")
-                video_url = BASE_URL + video_url
+                video_url = base_url + video_url
 
                 if not video_url:
                     continue
@@ -208,8 +208,10 @@ class ItalyParser(BaseParser):
                 cam_url: str = camera_data.get("URL", "")
                 if cam_url.startswith("https://inviaggio.autobspd.it/"):
                     continue
-                if camera_data.get("VIS_WEB") == "S":
+
+                if camera_data.get("VIS_WEB") == "S": #If camera is visible/online. Italy actually checks their cameras.
                     if cam_url == "---":
+                        # Italy calls the camera id -> 'IP" for some reason
                         cam_url = base_ip_url.format(ip=camera_data.get("IP", ""))
 
                     geometry: dict[str, Any] = feature.get("geometry", {})
@@ -306,6 +308,8 @@ class ItalyParser(BaseParser):
             parsed_data.extend(a22_parsed)
 
         a4_cameras: list[dict[str, Any]] = []
+
+       # As Italy has various concessionaries for the main road, we need to handle the government + 3 other sections.
         a4_cameras.extend(self.parse_a4_abp(raw_data.get("a4_abp", "")))
         a4_cameras.extend(self.parse_a4_cav(raw_data.get("a4_cav", "")))
         a4_cameras.extend(self.parse_a4_satap(raw_data.get("a4_satap", "")))
@@ -317,6 +321,7 @@ class ItalyParser(BaseParser):
             if a4_entry:
                 a4_entry["highway"]["cameras"].extend(a4_cameras)
             else:
+                # This shouldn't happen, but just in case
                 parsed_data.append(
                     {
                         "highway": {
@@ -327,6 +332,7 @@ class ItalyParser(BaseParser):
                     }
                 )
 
+        # De-duplicate cameras based on coordinates
         parsed_data = self.merge_camera_data(
             parsed_data,
             match_by="coordinates",
@@ -345,7 +351,7 @@ async def get_parsed_data(
     output_file: str | Path | None = None, output_folder: str | Path | None = None
 ) -> Any:
     """
-    Downloads and parses camera data for Italy.
+    Wrapper function for ItalyParser.get_parsed_data.
 
     Args:
         output_file (str | Path | None, optional): Specific file path to save output. Defaults to None.

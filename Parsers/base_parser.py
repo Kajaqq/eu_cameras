@@ -50,8 +50,8 @@ class BaseParser(ABC):
         """
         pass
 
+    @staticmethod
     def format_camera(
-        self,
         camera_id: str | int | None,
         camera_km_point: float | None,
         camera_view: str,
@@ -65,8 +65,8 @@ class BaseParser(ABC):
 
         Args:
             camera_id (str | int | None): The unique identifier for the camera.
-            camera_km_point (float | None): The kilometer point location of the camera.
-            camera_view (str): The viewing direction or angle of the camera.
+            camera_km_point (float | None): The kilometer point location of the camera, if available
+            camera_view (str): The viewing direction or angle of the camera, if available
             camera_type (str): The type or format of the camera feed (e.g., 'img', 'vid').
             coord_x (float | None): The longitude (X) coordinate.
             coord_y (float | None): The latitude (Y) coordinate.
@@ -91,7 +91,7 @@ class BaseParser(ABC):
         self, grouped_highways: dict[str, list[dict[str, Any]]]
     ) -> list[dict[str, Any]]:
         """
-        Converts the internal grouping dictionary to the final list format.
+        Create the highway format from internal data structure.
 
         Args:
             grouped_highways (dict[str, list[dict[str, Any]]]): A dictionary mapping highway
@@ -263,7 +263,7 @@ class BaseParser(ABC):
         if output_file:
             await save_json_async(parsed_data, output_file)
         elif output_folder:
-            file_name = f"cameras_{self.country.lower()}{'_gov' if self.country in ['ES', 'UK'] else ''}.json"  # FR handles saving independently
+            file_name = f"cameras_{self.country.lower()}{'_gov' if self.country in ['ES', 'UK'] else ''}.json"  # France(FR) and Italy(IT) handle saving independently
             await save_json_async(parsed_data, Path(output_folder) / file_name)
 
         return parsed_data

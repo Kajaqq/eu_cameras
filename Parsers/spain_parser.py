@@ -73,7 +73,7 @@ async def get_parsed_data(
     output_file: str | Path | None = None, output_folder: str | Path | None = None
 ) -> Any:
     """
-    Downloads and parses camera data for Spain.
+    Wrapper function for SpainParser.get_parsed_data.
 
     Args:
         output_file (str | Path | None, optional): Specific file path to save output. Defaults to None.
