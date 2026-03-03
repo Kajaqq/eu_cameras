@@ -25,6 +25,7 @@ IT_NORTH_SOUTH: list[str] = CONSTANTS.ITALY.HighwaySort.NORTH_SOUTH
 IT_EAST_WEST: list[str] = CONSTANTS.ITALY.HighwaySort.EAST_WEST
 IT_RINGS: list[str] = CONSTANTS.ITALY.HighwaySort.RINGS
 
+# Map camera regions to countries
 COUNTRY_SORT_MAP: dict[str, tuple[list[str], list[str], list[str]]] = {
     "UK": (UK_NORTH_SOUTH, UK_EAST_WEST, UK_RINGS),
     "ES": (ES_NORTH_SOUTH, ES_EAST_WEST, ES_RINGS),

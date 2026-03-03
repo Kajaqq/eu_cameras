@@ -28,10 +28,13 @@ def get_video_frame(video_file: Path) -> None:
     """
     output_path = video_file.with_suffix(".png")
     input_file = ffmpeg.input(str(video_file), ss="00:00:00")
+    # scale all images to the same size
     scaled = input_file.scale(w=352, h=288)
+    # save the first frame as a PNG
     ffmpeg.output(scaled, filename=str(output_path), vframes=1).run(
         overwrite_output=True, quiet=True
     )
+    # remove the video
     video_file.unlink()
 
 
@@ -48,6 +51,7 @@ def get_image_hash(img_file: Path | str) -> Camera | None:
     try:
         img_file_path = Path(img_file)
         with Image.open(img_file_path) as img:
+            # Hash the image
             h_bits = dhash.dhash_int(img, size=8)
             return Camera(h_bits, img_file_path.stem)
 
@@ -83,6 +87,7 @@ def get_duplicates(tree: pybktree.BKTree, hash_list: list[Camera]) -> set[str]:
     """
     dupes: set[str] = set()
     for cam in hash_list:
+        # find duplicates within 4 bits of difference
         matches = tree.find(cam, 8)
         duplicates = [m[1].id for m in matches if m[1].id != cam.id]
 
@@ -161,7 +166,7 @@ def cleanup_folder(folder_path: Path) -> None:
 
 def folder_hash(folder_path: Path | str) -> set[str] | None:
     """
-    Hashes contents of a folder, returns duplicates, and cleans up the folder.
+    Main orchestrator function for folder hashing.
 
     Args:
         folder_path (Path | str): Path to the folder.

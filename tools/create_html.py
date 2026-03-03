@@ -95,7 +95,7 @@ def get_camera_urls(
     return cameras, country
 
 
-# language=html
+
 def generate_html(
     cameras: list[tuple[str, str, str, int, str]], interval: int, country: str
 ) -> str:
@@ -116,6 +116,7 @@ def generate_html(
         for cid, url, hw, num, media_type in cameras
     ]
 
+    # language=html
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>

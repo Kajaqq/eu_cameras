@@ -95,7 +95,7 @@ def create_url(
     base: str, camera_id: str | int, camera_type: str
 ) -> tuple[str, str | None]:
     """
-    Constructs the full media URL based on the country, ID, and type.
+    Constructs the direct camera URL based on the country, ID, and type.
 
     Args:
         base (str): The country code (e.g., 'FR', 'ES', 'UK').

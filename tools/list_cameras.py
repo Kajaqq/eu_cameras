@@ -15,7 +15,7 @@ SEPARATOR: str = CONSTANTS.COMMON.SEPARATOR
 
 def parse_highways(json_data: list[dict[str, Any]]) -> list[tuple[str, int]]:
     """
-    Parses highway camera counts from JSON data.
+    Counts highway cameras from JSON data.
 
     Args:
         json_data (list[dict[str, Any]]): The parsed JSON containing highways and cameras.

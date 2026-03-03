@@ -21,7 +21,7 @@ async def save_image(
     camera_id: str | int, ext: str, img_bytes: bytes, output_dir: Path = IMAGE_DIR
 ) -> None:
     """
-    Saves an image byte sequence to a file.
+    Helper function to save an image to disk.
 
     Args:
         camera_id (str | int): The camera identifier, used for the filename.
@@ -46,12 +46,14 @@ def get_camera_data(json_data: list[dict[str, Any]]) -> list[Any]:
     """
     country = get_country(json_data)
     if country == "IT":
+        # Italy has urls in the data directly
         camera_ids = [
             [camera["camera_id"], camera["url"]]
             for highway in json_data
             for camera in highway["highway"]["cameras"]
         ]
     else:
+        # Get camera id to generate urls later on
         camera_ids = [
             [camera["camera_id"], camera["camera_type"]]
             for highway in json_data
@@ -66,7 +68,7 @@ async def check_camera(
     camera_id: str | int,
     camera_type: str,
     rate_limiter: asyncio.Semaphore,
-    download: bool,
+    download: bool = True,
     output_dir: Path | None = None,
 ) -> dict[str, Any]:
     """
@@ -78,11 +80,11 @@ async def check_camera(
         camera_id (str | int): The camera identifier.
         camera_type (str): The camera type or URL.
         rate_limiter (asyncio.Semaphore): Concurrency limit semaphore.
-        download (bool): Whether to download the media to disk.
+        download (bool): Whether to download the media to disk. Defaults to True.
         output_dir (Path | None, optional): Directory to save downloaded media. Defaults to None.
 
     Returns:
-        dict[str, Any]: A dictionary containing the camera 'id' and 'status' (or False if failed).
+        dict[str, Any]: A dictionary containing the camera 'id' and 'status' (HTML response code or False if failed).
     """
 
     def _validate_response(bytes_: bytes) -> None:
@@ -90,6 +92,7 @@ async def check_camera(
             raise HTTPError(f"Response too small: {len(bytes_)} bytes")
 
     if source != "IT":
+        # Create the URL based on the source and camera type
         url, ext = create_url(source, camera_id, camera_type)
     else:
         # Special case for Italy where urls are in the data directly
@@ -168,11 +171,11 @@ async def main(
 
     Args:
         camera_json (list[dict[str, Any]]): The input camera data.
-        rate_limit (int, optional): The concurrency limit for checking. Defaults to DEFAULT_RATE_LIMIT.
+        rate_limit (int, optional): The concurrency limit for checking. Defaults to DEFAULT_RATE_LIMIT -> 50.
         download (bool, optional): Whether to download images to check for visual duplication. Defaults to True.
         save_file (bool, optional): Whether to save the verified JSON data to disk. Defaults to False.
-        output_dir (Path, optional): Directory to save the verified JSON. Defaults to JSON_OUTPUT_DIR.
-        image_dir (Path, optional): Directory to temporarily save verification images. Defaults to IMAGE_DIR.
+        output_dir (Path, optional): Directory to save the verified JSON. Defaults to JSON_OUTPUT_DIR -> './data'.
+        image_dir (Path, optional): Directory to temporarily save verification images. Defaults to IMAGE_DIR -> './data/images'.
 
     Returns:
         list[dict[str, Any]]: The cleaned list of verified cameras.
@@ -215,6 +218,7 @@ async def main(
             errored_cameras.extend(probably_offline_cams)
             alive_cameras = list(set(alive_cameras) - set(probably_offline_cams))
 
+    # Filter offline cameras
     if errored_cameras:
         print(SEP)
         print("Filtering offline cameras")
