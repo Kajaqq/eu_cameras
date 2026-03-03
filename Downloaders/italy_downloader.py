@@ -25,7 +25,7 @@ class ItalyDownloader(BaseDownloader):
 
     async def get_a22_raw(self) -> str | None:
         """
-        Fetches raw data from the A22 service by extracting the JSON injected into HTML.
+        Fetches raw data for the A22 highway by extracting the JSON injected into HTML.
 
         Returns:
             str | None: The extracted raw JSON string or None if failed.

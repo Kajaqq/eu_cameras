@@ -31,9 +31,9 @@ class BaseDownloader(ABC):
 
         Args:
             timeout_int (float, optional): The HTTP request timeout in seconds.
-                Defaults to CONSTANTS.COMMON.HTTP_TIMEOUT.
+                Defaults to CONSTANTS.COMMON.HTTP_TIMEOUT -> 20s.
             rate_limit (int, optional): The maximum number of concurrent connections.
-                Defaults to CONSTANTS.COMMON.RATE_LIMIT.
+                Defaults to CONSTANTS.COMMON.RATE_LIMIT -> 50 requests.
         """
         self.timeout_int = timeout_int
         self.rate_limit = rate_limit
@@ -48,8 +48,11 @@ class BaseDownloader(ABC):
             tuple[dict[str, str], aiohttp.ClientTimeout, aiohttp.TCPConnector]:
                 A tuple containing the headers dictionary, timeout context, and TCP connector.
         """
+
         headers: dict[str, str] = CONSTANTS.COMMON.DEFAULT_HEADERS.copy()
         timeout = aiohttp.ClientTimeout(total=self.timeout_int)
+
+        # This shouldn't be required but for some reason it is
         resolver = aiohttp.AsyncResolver(nameservers=["8.8.8.8", "1.1.1.1"])
         connector = aiohttp.TCPConnector(
             resolver=resolver,
@@ -62,7 +65,7 @@ class BaseDownloader(ABC):
     @staticmethod
     def _format_error_message(method: str, url: str, error: Exception) -> str:
         """
-        Formats a standard error message.
+        Formats an error message to include the HTTP method and URL.
 
         Args:
             method (str): The HTTP method used (e.g., 'GET', 'POST').
@@ -86,7 +89,7 @@ class BaseDownloader(ABC):
             session (aiohttp.ClientSession): The active client session.
             method (str): The HTTP method (e.g., 'GET', 'POST').
             url (str): The target URL.
-            return_type (str, optional): The expected return type ('text' or 'bytes'). Defaults to 'text'.
+            return_type (str, optional): The expected return type ('bytes' for images or 'text' for everything else). Defaults to 'text'.
 
         Returns:
             tuple[bytes, int] | str: The response content. Either a tuple of (bytes, status code)
@@ -111,7 +114,7 @@ class BaseDownloader(ABC):
         Args:
             url (str): The target URL.
             method (str): The HTTP method.
-            session (aiohttp.ClientSession | None): An existing session or None.
+            session (aiohttp.ClientSession | None): An existing session or None if a new session should be created.
 
         Raises:
             HTTPError: If the request fails due to an aiohttp.ClientError.
@@ -124,11 +127,11 @@ class BaseDownloader(ABC):
                 headers, timeout_ctx, connector = self._get_http_settings()
                 async with aiohttp.ClientSession(
                     headers=headers, timeout=timeout_ctx, connector=connector
-                ) as new_session:
+                ) as new_session: # Create a new session
                     content = await self._async_request(new_session, method, url)
                     return str(content)  # enforce return type as str
             else:
-                content = await self._async_request(session, method, url)
+                content = await self._async_request(session, method, url) # Use existing session
                 return str(content)
         except aiohttp.ClientError as e:
             raise HTTPError(self._format_error_message(method, url, e)) from e
@@ -149,7 +152,7 @@ class BaseDownloader(ABC):
         self, url: str, session: aiohttp.ClientSession | None = None
     ) -> str:
         """
-        Downloads content from a URL via a GET request.
+        Public method to download content from a URL via a GET request.
 
         Args:
             url (str): The target URL.
@@ -164,7 +167,7 @@ class BaseDownloader(ABC):
         self, url: str, session: aiohttp.ClientSession | None = None
     ) -> str:
         """
-        Downloads content from a URL via a POST request.
+        Public method to download content from a URL via a POST request.
 
         Args:
             url (str): The target URL.
@@ -178,7 +181,7 @@ class BaseDownloader(ABC):
     @abstractmethod
     async def get_data(self) -> Any:
         """
-        Abstract method to fetch raw data. Must be implemented by child classes.
+        Abstract method for raw data retrieval. Must be implemented by subclasses.
 
         Returns:
             Any: The raw data.

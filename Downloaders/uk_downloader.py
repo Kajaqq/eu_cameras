@@ -9,7 +9,8 @@ CAMERA_API: str = CONSTANTS.UK.CAMERA_API_URL
 
 class UKDownloader(BaseDownloader):
     """
-    Downloader for UK highway camera data (Traffic England).
+    Downloader for UK highway camera data.
+    Only England (Traffic England) is supported at the moment.
     """
 
     async def get_data(self) -> str:
@@ -17,7 +18,7 @@ class UKDownloader(BaseDownloader):
         Downloads raw camera data for the UK.
 
         Returns:
-            str: The raw JSON string from the UK API.
+            str: The raw JSON string from the Traffic England API.
         """
         download_link: str = CAMERA_API
         return await self.download(download_link)

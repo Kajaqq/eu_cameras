@@ -17,8 +17,7 @@ class FranceDownloader(BaseDownloader):
 
     async def get_gov_url(self, session: aiohttp.ClientSession) -> str | None:
         """
-        Retrieves the dynamic government data URL by first fetching the latest
-        timestamp from the timestamp API.
+        Retrieves the government data URL by merging the timestamp with the data URL.
 
         Args:
             session (aiohttp.ClientSession): The active client session.

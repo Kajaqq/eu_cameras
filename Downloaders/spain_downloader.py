@@ -11,12 +11,12 @@ XOR_KEY: str = CONSTANTS.SPAIN.XOR_KEY
 
 class SpainDownloader(BaseDownloader):
     """
-    Downloader for Spanish highway camera data (DGT).
+    Downloader for Spanish government highway camera data (DGT).
     """
-
-    def decode_data(self, camaras_data: str | bytes) -> str:
+    @staticmethod
+    def decode_data(camaras_data: str | bytes) -> str:
         """
-        Decodes the base64 encoded and XOR-obfuscated camera data.
+        Decoder for the base64 encoded and XOR-obfuscated camera data.
 
         Args:
             camaras_data (str | bytes): The raw obfuscated data.
@@ -39,14 +39,14 @@ class SpainDownloader(BaseDownloader):
 
     async def get_data(self) -> str:
         """
-        Downloads and decodes the camera data.
+        Downloads the data from the government API and decodes it.
 
         Returns:
             str: The decoded JSON data as a string.
         """
         download_link: str = DATA_URL
-        xored_data: str = await self.download_post(download_link)
-        decoded_data: str = self.decode_data(xored_data)
+        raw_data: str = await self.download_post(download_link)
+        decoded_data: str = self.decode_data(raw_data)
         return decoded_data
 
 
