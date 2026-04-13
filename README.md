@@ -4,7 +4,7 @@
 
 HighwayView is a toolkit designed to scrap and aggregate the highway cameras from major European countries.
 
-It handles scraping, aggregation, deduplication, verification and visualization.
+It handles scraping, aggregation, deduplication, verification, and visualization.
 
 ## Supported Functionalities
 
@@ -13,7 +13,7 @@ It handles scraping, aggregation, deduplication, verification and visualization.
 - **Slideshow Generation** (`create_html.py`): Create optimized HTML slideshows from the camera data. Features lazy loading, memory management, and error handling, making it ideal for streaming software like OBS.
 - **Curated Camera Loops** (`create_camera_loop.py`): Automatically generate ~10-minute curated cycles of the most important national highways for each supported country.
 - **Data Inspection** (`list_cameras.py`): Command-line utility to quickly summarize highway and camera counts from parsed datasets.
-
+- **DATEX II Integration for Spain** (`get_datex_spain.py`): Automatically download and parse DATEX II road accidents data for Spain.
 ## Usage Examples
 
 Ensure you have the `uv` package manager installed.
@@ -51,6 +51,25 @@ Print a formatted list of all highways and their valid cameras from a generated 
 
 ```bash
 uv run tools/list_cameras.py data/cameras_it_online.json
+```
+
+**Generate Spain DATEX-II Overlay**
+Generate `data/overlay_data.json` once:
+
+```bash
+uv run get_datex_spain.py --once
+```
+
+Run continuously (refresh every 5 minutes by default):
+
+```bash
+uv run get_datex_spain.py
+```
+
+Use the overlay UI file:
+
+```text
+docs/overlay/index.html
 ```
 
 ## Project Structure
