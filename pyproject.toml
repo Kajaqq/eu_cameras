@@ -1,14 +1,14 @@
 [project]
-name = "CameraParser"
-version = "0.5.0"
+name = "HighwayView"
+version = "0.6.0"
 description = "Gets EU Traffic cams into a readable format sorted by highways"
 requires-python = ">=3.14"
 target-version = "py314"
 dependencies = [
     "dhash>=1.4",
-    "pillow>=12.1.1",
+    "pillow>=12.2.0",
     "pybktree>=1.1",
-    "ruff>=0.15.4",
+    "ruff>=0.15.10",
     "tqdm>=4.67.3",
     "typed-ffmpeg>=3.11",
     "tzdata>=2025.3",
@@ -18,6 +18,8 @@ dependencies = [
     "aiodns>=4.0.0",
     "natsort>=8.4.0",
     "winloop>=0.5.0",
+    "lxml>=5.0.0",
+    "pydantic>=2.0",
 ]
 
 [tool.ruff.lint]
@@ -34,5 +36,5 @@ ignore = ['TRY003']
 
 [dependency-groups]
 dev = [
-    "pdoc>=16.0.0",
+    "pdoc>=16.0.0"
 ]
