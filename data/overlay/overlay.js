@@ -2,8 +2,8 @@ const DATA_URL = "../overlay_data.json";
 const FETCH_INTERVAL_MS = 10_000;
 const SCROLL_INTERVAL_MS = 15_000;
 const MAX_VISIBLE_ALERTS = 3;
-const ITEM_HEIGHT_PX = 56;
-const ITEM_GAP_PX = 7;
+const ITEM_HEIGHT_PX = 64;
+const ITEM_GAP_PX = 8;
 const STEP_PX = ITEM_HEIGHT_PX + ITEM_GAP_PX;
 const SCROLL_ANIMATION_MS = 650;
 
@@ -158,7 +158,7 @@ function formatAlertText(alert) {
   const road = alert.road_name || "Unknown road";
   const eventType = formatEventType(alert);
   const location = formatLocation(alert);
-  const until = alert.end_time ? `until ${toLocalShort(alert.end_time)}` : "Currently Active";
+  const until = alert.end_time ? `until ${toLocalShort(alert.end_time)}` : "";
   const main = `${road} ${eventType}`;
   const sub = [location, until].filter(Boolean).join(" ");
   return { main, sub };
