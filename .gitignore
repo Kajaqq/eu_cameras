@@ -29,3 +29,5 @@ uv.lock
 *overlay_data.js
 data/html
 data/images
+*.sqlite
+Cameras/*
