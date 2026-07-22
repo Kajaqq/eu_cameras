@@ -128,7 +128,7 @@ function locationName(location) {
 }
 
 function formatRoad(alert) {
-  return alert.road_name || locationRoad(alert.location_from) || locationRoad(alert.location_to) || "BE";
+  return alert.road_name || locationRoad(alert.location_from) || locationRoad(alert.location_to) || "";
 }
 
 function formatLocation(alert) {
