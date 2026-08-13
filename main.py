@@ -3,17 +3,17 @@ from pathlib import Path
 from typing import Any
 
 import winloop
+
 from config import CONSTANTS
 from Parsers import france_parser
 from Parsers.be_parser import BEParser
 from Parsers.italy_parser import ItalyParser
 from Parsers.nl_parser import NLParser
 from Parsers.spain_parser import SpainParser
-from Parsers.uk_parser import UKParser
 from tools.camera_check import main as camera_check
 from tools.create_camera_loop import main as create_loop
 from tools.create_html import main as create_html_main
-from tools.utils import get_raw_parsed_data
+from tools.utils import get_raw_parsed_data, load_json
 
 SEP = CONSTANTS.COMMON.SEPARATOR
 DEFAULT_RATE_LIMIT = CONSTANTS.COMMON.RATE_LIMIT
@@ -63,7 +63,7 @@ def create_html_files(
 
 async def get_camera_data(
     country: str, save_unchecked: bool, save_checked: bool, output_dir: Path
-) -> list[dict[str, Any]]:
+) -> list[dict[str, Any]]|None:
     """
     Downloads, parses, and explicitly checks cameras for a given country.
 
@@ -102,10 +102,11 @@ async def get_camera_data(
                 parser=italy_parser, output_path=save_unchecked_path
             )
         case "UK":
-            uk_parser = UKParser()
-            country_data = await get_raw_parsed_data(
-                parser=uk_parser, output_path=save_unchecked_path
-            )
+            try:
+                country_data=load_json(Path('data/cameras_uk.json'))
+            except (OSError, ValueError) as e:
+                country_data = None
+                print(f"Error loading cameras_uk.json: {e}")
             rate_limit = UK_RATE_LIMIT
         case "NL":
             nl_parser = NLParser()
@@ -119,14 +120,17 @@ async def get_camera_data(
             )
         case _:
             raise ValueError(f"Invalid country: {country}")
-
-    checked_country_data = await camera_check(
-        camera_json=country_data,
-        rate_limit=rate_limit,
-        output_dir=output_dir,
-        save_file=save_checked,
-    )
-    return checked_country_data
+    if country_data is not None:
+        checked_country_data = await camera_check(
+            camera_json=country_data,
+            rate_limit=rate_limit,
+            output_dir=output_dir,
+            save_file=save_checked,
+        )
+        return checked_country_data
+    else:
+        print (f"No cameras found for country {country}")
+        return None
 
 
 async def main() -> None:
@@ -147,42 +151,46 @@ async def main() -> None:
     spain_data = await get_camera_data(
         "Spain", save_unchecked, save_checked, default_dir
     )
-    selected_cameras = create_loop(spain_data)
-    if selected_cameras and create_html:
-        create_html_files(spain_data, HTML_OUTPUT_DIR, camera_ids=selected_cameras)
+    if spain_data is not None:
+        selected_cameras = create_loop(spain_data)
+        if selected_cameras and create_html:
+            create_html_files(spain_data, HTML_OUTPUT_DIR, camera_ids=selected_cameras)
 
     # FRANCE
     france_data = await get_camera_data(
         "France", save_unchecked, save_checked, default_dir
     )
-    selected_cameras = create_loop(france_data)
-    if selected_cameras and create_html:
-        create_html_files(france_data, HTML_OUTPUT_DIR, camera_ids=selected_cameras)
+    if france_data is not None:
+        selected_cameras = create_loop(france_data)
+        if selected_cameras and create_html:
+            create_html_files(france_data, HTML_OUTPUT_DIR, camera_ids=selected_cameras)
 
     # ITALY
     italy_data = await get_camera_data(
         "Italy", save_unchecked, save_checked, default_dir
     )
-    selected_cameras = create_loop(italy_data)
-    if selected_cameras and create_html:
-        create_html_files(italy_data, HTML_OUTPUT_DIR, camera_ids=selected_cameras)
+    if italy_data is not None:
+        selected_cameras = create_loop(italy_data)
+        if selected_cameras and create_html:
+            create_html_files(italy_data, HTML_OUTPUT_DIR, camera_ids=selected_cameras)
 
-    # # UK
-    # uk_data = await get_camera_data("UK", save_unchecked, save_checked, default_dir)
-    # selected_cameras = create_loop(uk_data)
-    # if selected_cameras and create_html:
-    #     create_html_files(uk_data, HTML_OUTPUT_DIR, camera_ids=selected_cameras)
+    # UK
+    uk_data = await get_camera_data("UK", save_unchecked, save_checked, default_dir)
+    if uk_data is not None:
+        selected_cameras = create_loop(uk_data)
+        if selected_cameras and create_html:
+            create_html_files(uk_data, HTML_OUTPUT_DIR, camera_ids=selected_cameras)
 
     # NETHERLANDS
     # NL only has ~25 cameras, so we just get them all
     nl_data = await get_camera_data("NL", save_unchecked, save_checked, default_dir)
-    if create_html:
+    if nl_data is not None and create_html:
         create_html_files(nl_data, HTML_OUTPUT_DIR)
 
     # BELGIUM
     # BE has no configured highway sequence, so we just get all checked cameras.
     be_data = await get_camera_data("BE", save_unchecked, save_checked, default_dir)
-    if create_html:
+    if be_data is not None and create_html:
         create_html_files(be_data, HTML_OUTPUT_DIR)
 
 
