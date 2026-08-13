@@ -1,5 +1,7 @@
-import winloop
 import asyncio
+
+import winloop
+
 from config import CONSTANTS
 from Downloaders.base_downloader import BaseDownloader
 

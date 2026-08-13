@@ -10,7 +10,6 @@ from config import CONSTANTS
 class HTTPError(Exception):
     """Custom exception for HTTP errors."""
 
-    pass
 
 
 class BaseDownloader(ABC):
@@ -215,7 +214,6 @@ class BaseDownloader(ABC):
         Returns:
             Any: The raw data.
         """
-        pass
 
 
 class GenericDownloader(BaseDownloader):
@@ -228,4 +226,3 @@ class GenericDownloader(BaseDownloader):
         """
         Calls get_data from the subclass BaseDownloader.
         """
-        pass

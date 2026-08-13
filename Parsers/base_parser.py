@@ -1,6 +1,6 @@
+import asyncio
 import copy
 import inspect
-import asyncio
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -36,7 +36,6 @@ class BaseParser(ABC):
         Returns:
             str: The two-letter country code (e.g., 'FR', 'ES').
         """
-        pass
 
     @abstractmethod
     async def parse(self, raw_data: Any) -> Any:
@@ -49,7 +48,6 @@ class BaseParser(ABC):
         Returns:
             Any: The parsed camera data.
         """
-        pass
 
     @staticmethod
     def format_camera(
@@ -153,9 +151,7 @@ class BaseParser(ABC):
                 return haversine_km(p1[1], p1[0], p2[1], p2[0]) <= threshold
             km1 = cam1.get("camera_km_point")
             km2 = cam2.get("camera_km_point")
-            if (km1 is not None and km2 is not None) and (abs(km1 - km2) <= threshold):
-                return True
-            return False
+            return bool((km1 is not None and km2 is not None) and abs(km1 - km2) <= threshold)
 
         def _is_duplicate(cam: dict[str, Any], existing: dict[str, Any]) -> bool:
             """Same-ID duplicate: both coords missing OR spatially close (coordinates mode only)."""

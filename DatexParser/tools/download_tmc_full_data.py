@@ -9,9 +9,10 @@ from pathlib import Path
 
 import aiohttp
 import winloop
-from config import CONSTANTS
 from lxml import html
 from tqdm import tqdm
+
+from config import CONSTANTS
 
 DEFAULT_INPUT = Path("tools/tmc/tmc_data.json")
 DEFAULT_OUTPUT = Path("tools/tmc/tmc_location_summaries.json")
@@ -378,10 +379,7 @@ async def download_summaries(
             else location.category_code == code
             for code in REMOTE_EXCLUDED_CATEGORY_CODES
         )
-        if remote_excluded:
-            add_summary(payload, location, {"Name": location.source_name})
-            local_copy_count += 1
-        elif " " not in clean_text(location.source_name):
+        if remote_excluded or " " not in clean_text(location.source_name):
             add_summary(payload, location, {"Name": location.source_name})
             local_copy_count += 1
         else:

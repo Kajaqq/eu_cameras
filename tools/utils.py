@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from lambert import Lambert93, convertToWGS84Deg
+
 from config import CONSTANTS
 
 EARTH_RADIUS_KM = CONSTANTS.COMMON.EARTH_RADIUS_KM
@@ -134,7 +135,7 @@ def create_url(base: str, camera_id: str | int, camera_type: str) -> tuple[str, 
             raise ValueError("Invalid data")
 
 
-def unix_to_datetime(timestamp: int | float | str, tz=CONSTANTS.FRANCE.PARIS_TZ) -> str:
+def unix_to_datetime(timestamp: float | str, tz=CONSTANTS.FRANCE.PARIS_TZ) -> str:
     """
     Converts a Unix timestamp to a formatted datetime string with timezone normalization.
     Used mainly for France cameras.

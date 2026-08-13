@@ -247,10 +247,7 @@ def process_highway_sequence(cameras: list[dict[str, Any]], sequence_list: list[
                         x is None and km is not None and 217 <= km <= 363
                     ):
                         temp_filtered.append(c)
-                elif "EAST" in highway_name:
-                    if (x is not None and x > 12.0) or (
-                        x is None and km is not None and km > 363
-                    ):
+                elif "EAST" in highway_name and (x is not None and x > 12.0) or (x is None and km is not None and km > 363):
                         temp_filtered.append(c)
 
             filtered_cameras = temp_filtered

@@ -1,12 +1,13 @@
 import asyncio
-import winloop
 import json
-import aiohttp
 
-from tools.france_asfa_deobfuscate import get_complete_url as get_asfa_url
+import aiohttp
+import winloop
+
 from config import CONSTANTS
-from tools.utils import unix_to_datetime
 from Downloaders.base_downloader import BaseDownloader
+from tools.france_asfa_deobfuscate import get_complete_url as get_asfa_url
+from tools.utils import unix_to_datetime
 
 
 class FranceDownloader(BaseDownloader):

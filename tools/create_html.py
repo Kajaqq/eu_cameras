@@ -86,10 +86,8 @@ def get_camera_urls(
         if highways and highway_name not in highways:
             continue
 
-        camera_number = 0
-        for camera in highway["cameras"]:
+        for cam_number, camera in enumerate(highway["cameras"]):
             camera_id = camera["camera_id"]
-            camera_number += 1
 
             if country == "IT":
                 url = camera["url"]
@@ -108,7 +106,7 @@ def get_camera_urls(
                 url, _ = create_url(country, camera_id, camera_type)
                 media_type = "video" if camera_type in ["vid", "asfa_vid"] else "image"
 
-            cameras.append((camera_id, url, highway_name, camera_number, media_type))
+            cameras.append((camera_id, url, highway_name, cam_number, media_type))
 
     return cameras, country
 

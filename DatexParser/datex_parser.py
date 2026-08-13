@@ -27,6 +27,7 @@ from xml.etree import ElementTree as ET
 from Downloaders.base_downloader import GenericDownloader, HTTPError
 from Parsers.base_parser import BaseParser
 from tools.utils import haversine_km
+
 from .datex_models import (
     NON_TRUCK_VEHICLE_TYPES,
     LocationPoint,
@@ -336,12 +337,7 @@ class DatexParser(BaseParser):
                 not point.province or province.lower() not in point.province.lower()
             ):
                 return False
-            if municipality and (
-                not point.municipality
-                or municipality.lower() not in point.municipality.lower()
-            ):
-                return False
-            return True
+            return not (municipality and (not point.municipality or municipality.lower() not in point.municipality.lower()))
 
         return [
             a

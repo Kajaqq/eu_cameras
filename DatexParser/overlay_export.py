@@ -8,7 +8,7 @@ from typing import Any, Protocol
 
 from config import CONSTANTS
 
-from .datex_filter import FilterConfig, HeuristicFilter, SEVERITY_RANK
+from .datex_filter import SEVERITY_RANK, FilterConfig, HeuristicFilter
 from .datex_models import TruckDashboardAlert
 
 

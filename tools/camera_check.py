@@ -6,9 +6,9 @@ import aiohttp
 import winloop
 from tqdm.asyncio import tqdm
 
-import tools.diff_hash as diff_hash
 from config import CONSTANTS
 from Downloaders.base_downloader import GenericDownloader, HTTPError
+from tools import diff_hash
 from tools.utils import create_url, get_country, load_json, save_json
 
 SEP = CONSTANTS.COMMON.SEPARATOR
@@ -249,5 +249,6 @@ async def main(
 
 
 if __name__ == "__main__":
-    camera_file = load_json("data/spain_original.json")
+    json_file = Path("../data/cameras_uk.json")
+    camera_file = load_json(json_file)
     winloop.run(main(camera_json=camera_file))

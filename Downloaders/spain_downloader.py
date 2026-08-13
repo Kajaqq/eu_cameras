@@ -1,10 +1,11 @@
-import winloop
 from base64 import b64decode
 from pathlib import Path
 
+import winloop
+
 from config import CONSTANTS
-from tools.utils import xor_decode
 from Downloaders.base_downloader import BaseDownloader
+from tools.utils import xor_decode
 
 DATA_URL: str = CONSTANTS.SPAIN.CAMERA_API
 XOR_KEY: str = CONSTANTS.SPAIN.XOR_KEY
